@@ -1,0 +1,28 @@
+# === 原始 & 中间数据 ===
+data/raw/
+data/interim/
+ref/star_index/
+ref/*.fa
+ref/*.fa.gz
+ref/*.gtf
+ref/*.gtf.gz
+
+# === 输出与报告 ===
+results/
+logs/
+
+# === 环境与缓存 ===
+.mamba/
+.micromamba/
+.venv/
+__pycache__/
+*.pyc
+*.RData
+*.Rhistory
+*.Rproj.user/
+*.Rproj
+
+# === 临时文件 ===
+*.tmp
+*.log
+.DS_Store
