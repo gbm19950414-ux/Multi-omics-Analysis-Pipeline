@@ -1,0 +1,44 @@
+project_dir: /Volumes/MyPassport/multiomics_mech
+
+input:
+  batches:
+    - {name: batch1, file: data/raw/lipid/20240617_0612_HH_cxy_data.csv, platform: untargeted}
+    - {name: batch2, file: data/raw/lipid/20241023_HH_cxy_data.csv,   platform: untargeted}
+    - {name: batch3, file: data/raw/lipid/20241122_HH_cxy_data.csv,   platform: untargeted}
+    - {name: batch4, file: data/raw/lipid/20250609_HH_cxy_data.csv,   platform: targeted_CL}
+
+  include_batches: [batch1, batch2, batch3]   # 主线仅合并这三批
+  cl_panel_batch: batch4                      # 若后续要并入CL面板，可单独处理
+
+  columns:
+    sample: SampleID
+    group:  Group
+    batch:  Batch
+    lipid:  LipidName
+    class:  Class
+    adduct: Adduct
+    formula: Formula
+    rt: RT
+    mz: MZ
+    score: Score
+    intensity: Intensity
+
+  patterns:
+    blank_regex: "^Blank"   # 空白命名规则，留空则不做空白过滤
+    qc_regex: "^QC"         # QC命名规则（本版未使用，可扩展）
+
+  detect_rate_min: 0.7
+  score_min: 0.7
+  blank_ratio_max: 0.2
+
+  impute:
+    mar_method: knn        # knn | none
+    mnar_method: halfmin   # halfmin | none
+
+  normalize: TIC           # IS | TIC | PQN
+  transform: log2
+  scale: pareto
+
+metadata_file: results/lipid/tables/sample_metadata.tsv
+out_dir:   results/lipid/tables
+plots_dir: results/lipid/plots

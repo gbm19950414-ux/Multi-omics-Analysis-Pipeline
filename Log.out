@@ -1,0 +1,26 @@
+STAR version=                 2.7.11b
+STAR compilation time,server,dir= :/opt/mambaforge/envs/bioconda/conda-bld/star_1753326329267/work/source
+##### Command Line:
+STAR --runThreadN 8 --runMode alignReads --genomeDir /Volumes/MyPassport/multiomics_mech/ref/star_index ...其余参数...
+##### Initial USER parameters from Command Line:
+###### All USER parameters from Command Line:
+runThreadN                    8     ~RE-DEFINED
+runMode                       alignReads        ~RE-DEFINED
+genomeDir                     /Volumes/MyPassport/multiomics_mech/ref/star_index     ~RE-DEFINED
+##### Finished reading parameters from all sources
+
+##### Final user re-defined parameters-----------------:
+runMode                           alignReads   
+runThreadN                        8
+genomeDir                         /Volumes/MyPassport/multiomics_mech/ref/star_index
+
+-------------------------------
+##### Final effective command line:
+STAR   --runMode alignReads      --runThreadN 8   --genomeDir /Volumes/MyPassport/multiomics_mech/ref/star_index
+----------------------------------------
+
+Number of fastq files for each mate = 1
+
+EXITING because of fatal input ERROR: could not open readFilesIn=Read1
+
+Nov 06 08:34:37 ...... FATAL ERROR, exiting
