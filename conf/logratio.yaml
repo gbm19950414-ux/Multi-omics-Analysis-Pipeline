@@ -1,7 +1,0 @@
-alr_denominators:
-  CL: PG
-  MLCL: CL
-  oxCL: CL
-  PG: PA
-clr_reference_set: [CL, PG, MLCL, PA]
-notes: "按数据特性后续再微调"

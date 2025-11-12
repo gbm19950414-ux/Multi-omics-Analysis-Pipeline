@@ -1,6 +1,0 @@
-lipid_indicators:
-  synthesis: ["CL/PG"]
-  remodeling: ["MLCL/CL"]
-  oxidation: ["oxCL/CL"]
-  transport: ["PG/PA"]
-  supply: ["ΣCL", "ΣPG"]
