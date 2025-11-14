@@ -1,0 +1,64 @@
+project_dir: /Volumes/Samsung_SSD_990_PRO_2TB_Media/multiomics_mech
+
+input:
+  batches:
+    - name: batch1
+      file: data/raw/lipid/batch1_clean.csv
+      platform: untargeted
+      qc_cols:
+        grade:   "Grade.c."
+        sn:      "S.N.c."
+        rt:      null        # batch1 没有 Rt
+        height:  null        # 也没有 Height
+
+    - name: batch2
+      file: data/raw/lipid/batch2_clean.csv
+      platform: untargeted
+      qc_cols:
+        grade:   "Grade.c."
+        sn:      "S.N.c."
+        rt:      null
+        height:  null
+
+    - name: batch3
+      file: data/raw/lipid/batch3_clean.csv
+      platform: untargeted
+      qc_cols:
+        grade:   "Grade.c."
+        sn:      "S.N.c."
+        rt:      "Rt.c."
+        height:  null
+
+    - name: batch4
+      file: data/raw/lipid/batch4_clean.csv
+      platform: targeted_CL
+      qc_cols:
+        grade:   "Grade.c."
+        sn:      "S.N.c."
+        rt:      "Rt.c."
+        height:  "Height.c."
+
+  include_batches: [batch1, batch2, batch3, batch4]   # 全部转长表
+
+columns:
+  lipid: lipidName
+  ion:   LipidIon
+  class: Class
+  mz:    CalcMz
+
+patterns:
+  qc_regex: "QC"
+  blank_regex: "^Blank"
+
+filters:
+  detect_rate_min: 0.7
+  score_min: 0
+  blank_ratio_max: 0.2
+
+normalize: TIC
+transform: log2
+scale: pareto
+
+metadata_file: results/lipid/tables/sample_metadata.tsv
+out_dir: results/lipid/tables
+plots_dir: results/lipid/plots

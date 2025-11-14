@@ -1,0 +1,107 @@
+# ========== RNA-seq / Multi-omics Analysis Ignore Rules ==========
+
+# 临时文件与缓存
+*.tmp
+*.log
+*.bak
+*.swp
+*.Rhistory
+*.RData
+.DS_Store
+
+# 压缩与大文件
+*.gz
+*.zip
+*.tar
+*.tar.gz
+*.bz2
+
+# Fastq 原始测序数据
+data/raw/**/*.fastq
+data/raw/**/*.fastq.gz
+data/raw/**/*.fq
+data/raw/**/*.fq.gz
+
+# 中间文件：比对、计数、索引
+data/interim/**
+data/processed/**/*.bam
+data/processed/**/*.sam
+data/processed/**/*.bai
+data/processed/**/*.counts
+data/processed/**/*.tsv
+data/processed/**/*.rds
+
+# STAR / HISAT2 索引和日志
+ref/**
+*.bt2
+*.bt2l
+*.sa
+*.ann
+*.bwt
+*.pac
+*.dict
+*.fai
+Log.out
+Log.progress.out
+
+# 结果文件（可重建）
+results/qc/**
+results/rna/**
+results/**/multiqc*
+results/**/featureCounts*
+results/**/deseq2*
+results/**/interaction*
+
+# 环境配置
+.venv/
+.env/
+*.Rproj.user/
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE / 系统文件
+.vscode/
+.idea/
+# ---- 大文件与中间文件 ----
+ref/**.fa
+ref/**.gtf
+ref/unzipped/**
+tmp_star/**
+tmp_hisat2_sys/**
+data/raw/**
+data/interim/**
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+*.bam
+*.sam
+*.cram
+*.gtf
+*.fa
+*.fasta
+# 参考基因组与注释文件
+ref/**.fa
+ref/**.fa.gz
+ref/**.fasta
+ref/**.fasta.gz
+ref/**.gtf
+ref/**.gtf.gz
+ref/unzipped/**
+
+# 临时文件与中间产物
+tmp_star/**
+tmp_hisat2_sys/**
+data/raw/**
+data/interim/**
+*.fastq
+*.fastq.gz
+ref/**
+data/raw/**
+data/interim/**
+tmp_*/**
+*.fastq
+*.fa
+*.gtf
+*.bam *.bai

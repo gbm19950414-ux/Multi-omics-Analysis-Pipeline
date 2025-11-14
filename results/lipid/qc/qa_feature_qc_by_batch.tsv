@@ -1,0 +1,5 @@
+batch	n_feature_total	n_feature_with_qc	n_pass_n_qc	n_pass_mean	n_pass_cv	n_pass_sn	n_pass_rt	n_keep_for_corr
+batch1	1354	1354	0	1353	0	803	1354	0
+batch2	1130	1130	1130	1130	1020	721	1130	670
+batch3	1251	1251	1251	1251	1148	808	1217	750
+batch4	122	122	122	122	99	51	119	43

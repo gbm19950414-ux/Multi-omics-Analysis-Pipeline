@@ -1,0 +1,15 @@
+Status	/Volumes/Samsung_SSD_990_PRO_2TB_Media/multiomics_mech/data/interim/rna/batch3/hisat2/KO_1/Aligned.sortedByCoord.out.bam	/Volumes/Samsung_SSD_990_PRO_2TB_Media/multiomics_mech/data/interim/rna/batch3/hisat2/KO_2/Aligned.sortedByCoord.out.bam	/Volumes/Samsung_SSD_990_PRO_2TB_Media/multiomics_mech/data/interim/rna/batch3/hisat2/KO_3/Aligned.sortedByCoord.out.bam	/Volumes/Samsung_SSD_990_PRO_2TB_Media/multiomics_mech/data/interim/rna/batch3/hisat2/WT_1/Aligned.sortedByCoord.out.bam	/Volumes/Samsung_SSD_990_PRO_2TB_Media/multiomics_mech/data/interim/rna/batch3/hisat2/WT_2/Aligned.sortedByCoord.out.bam	/Volumes/Samsung_SSD_990_PRO_2TB_Media/multiomics_mech/data/interim/rna/batch3/hisat2/WT_3/Aligned.sortedByCoord.out.bam
+Assigned	38914612	41118760	41890740	40171680	40261300	40027897
+Unassigned_Unmapped	1879809	2112242	1401235	1538505	1543557	1332705
+Unassigned_Read_Type	0	0	0	0	0	0
+Unassigned_Singleton	0	0	0	0	0	0
+Unassigned_MappingQuality	0	0	0	0	0	0
+Unassigned_Chimera	0	0	0	0	0	0
+Unassigned_FragmentLength	0	0	0	0	0	0
+Unassigned_Duplicate	0	0	0	0	0	0
+Unassigned_MultiMapping	4696942	4648229	4675324	4854986	4591702	4588967
+Unassigned_Secondary	0	0	0	0	0	0
+Unassigned_NonSplit	0	0	0	0	0	0
+Unassigned_NoFeatures	1426785	1657824	1698303	1365714	1374569	1558589
+Unassigned_Overlapping_Length	0	0	0	0	0	0
+Unassigned_Ambiguity	2530771	2625904	2682661	2666469	2659532	2491308
