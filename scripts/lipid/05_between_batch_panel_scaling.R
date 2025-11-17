@@ -61,6 +61,10 @@ suppressPackageStartupMessages({
 tables_dir <- "results/lipid/tables"
 qc_dir     <- "results/lipid/qc"
 
+## batch1 专用的 panel 选择阈值（可根据需要手动调整）
+THR_MEAN_B1 <- 0      # batch1: qc_mean 下限（目前不启用，设为 0）
+THR_SN_B1   <- 10     # batch1: qc_sn_median 下限（例如 10）
+
 long_pqn_path <- file.path(tables_dir, "lipid_long_dedup_pqn.tsv")
 
 cat("============================================================\n")
@@ -118,13 +122,65 @@ long_pqn <- long_pqn %>%
     keep_for_correction = to_logical(keep_for_correction)
   )
 
+## 从 feature_qc_summary 构建 batch1 的 keep_for_panel，并与 batch2/3 的 keep_for_correction 合并
+feature_qc_path <- file.path(qc_dir, "lipid_feature_qc_summary.tsv")
+if (!file.exists(feature_qc_path)) {
+  stop("[ERROR] 找不到 feature QC 文件: ", feature_qc_path,
+       "；无法构造 batch1 的 keep_for_panel。")
+}
+
+feature_qc <- readr::read_tsv(feature_qc_path, guess_max = 1e6, show_col_types = FALSE)
+
+## 为 batch1 定义宽松的 panel 规则：n_qc_non_na >= 1, qc_mean >= THR_MEAN_B1, qc_sn_median >= THR_SN_B1
+b1_panel <- feature_qc %>%
+  dplyr::filter(batch == "batch1") %>%
+  mutate(
+    keep_for_panel_b1 = (
+      n_qc_non_na >= 1 &
+      !is.na(qc_mean) & qc_mean >= THR_MEAN_B1 &
+      !is.na(qc_sn_median) & qc_sn_median >= THR_SN_B1
+    )
+  )
+
+## 合成一个统一的 keep_for_panel：
+##   - batch1: 使用 keep_for_panel_b1
+##   - batch2/3: 使用原有 keep_for_correction
+##   - 其他 batch（如 batch4）默认 FALSE（不用于 Panel A）
+feature_qc_panel <- feature_qc %>%
+  left_join(
+    b1_panel %>%
+      select(batch, lipidName, LipidIon, CalcMz, keep_for_panel_b1),
+    by = c("batch", "lipidName", "LipidIon", "CalcMz")
+  ) %>%
+  mutate(
+    keep_for_panel = dplyr::case_when(
+      batch == "batch1"               ~ keep_for_panel_b1,
+      batch %in% c("batch2", "batch3") ~ keep_for_correction,
+      TRUE                             ~ FALSE
+    )
+  )
+
+panel_keep <- feature_qc_panel %>%
+  select(batch, lipidName, LipidIon, CalcMz, keep_for_panel)
+
+long_pqn <- long_pqn %>%
+  left_join(panel_keep,
+            by = c("batch", "lipidName", "LipidIon", "CalcMz")) %>%
+  mutate(
+    keep_for_panel = to_logical(keep_for_panel),
+    keep_for_panel = ifelse(is.na(keep_for_panel), FALSE, keep_for_panel)
+  )
+
 ## -------- 2. 先构建 QC 层面的 (batch, lipid) 中心值 ------------------
 
 cat("\n[STEP2] 计算 QC 层面的 pqn 中心值（per batch, per lipid）...\n")
 
 qc_long <- long_pqn %>%
   filter(
-    keep_for_correction,
+    (
+      (batch == "batch1" & keep_for_panel) |
+      (batch != "batch1" & keep_for_correction)
+    ),
     is_qc,
     !is.na(intensity_pqn),
     intensity_pqn > 0

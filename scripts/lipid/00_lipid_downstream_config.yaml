@@ -1,0 +1,117 @@
+# ============================================================
+#  lipid downstream analysis config
+#  用于 06–11 系列脚本
+# ============================================================
+
+# ------------------------------------------------------------
+# 基础路径（脚本默认从这里读写）
+# ------------------------------------------------------------
+paths:
+  long_table_pqn_bb: "results/lipid/tables/lipid_long_dedup_pqn_bb.tsv"
+  feature_qc_summary: "results/lipid/qc/lipid_feature_qc_summary.tsv"
+  sample_info_output: "results/lipid/tables/sample_info_lipid.tsv"
+
+  matrix_allfat: "results/lipid/tables/lipid_matrix_allfat_log2.tsv"
+  matrix_CL: "results/lipid/tables/lipid_matrix_CL_log2.tsv"
+
+  matrix_allfat_filtered: "results/lipid/tables/lipid_matrix_allfat_log2_filtered.tsv"
+  matrix_CL_filtered: "results/lipid/tables/lipid_matrix_CL_log2_filtered.tsv"
+
+# ------------------------------------------------------------
+# 样本信息：如何根据 sample_id 推断分组
+# 可选：提供 override
+# ------------------------------------------------------------
+sample_parsing:
+  # 若 sample_id 以这些前缀开头 → 属于此 batch
+  batch_regex:
+    batch1: "^B1_|^batch1|^WT_1|^HO_1"        # 可根据你真实命名再调整
+    batch2: "^B2_|^batch2"
+    batch3: "^B3_|^batch3"
+    batch4: "^B4_|^batch4"
+
+  # WT / HO 的自动解析规则
+  group_regex:
+    WT: "WT"
+    HO: "HO"
+
+  # 对某些 sample 做强制覆盖（可选）
+  overrides:
+    # example:
+    #   sample42:
+    #     batch: batch3
+    #     group: WT
+    #     condition: LPS
+
+# ------------------------------------------------------------
+# lipid universe 设置
+# ------------------------------------------------------------
+universe:
+  allfat:
+    include_batches: ["batch1", "batch2", "batch3"]   # 全脂质分析只用这些
+    exclude_classes: []                               # 如需排除 TG/DG 可填入
+  CL:
+    include_batches: ["batch1", "batch2", "batch3", "batch4"]
+    classes: ["CL", "CLP", "MLCL"]                    # 按你的数据结构调整
+
+# ------------------------------------------------------------
+# feature 过滤规则
+# ------------------------------------------------------------
+feature_filter:
+  # 全脂质（batch1–3）
+  allfat:
+    min_detect_rate_global: 0.7       # ≥70% 非缺失
+    min_detect_rate_per_group: 0.5    # 每个 group ≥50%
+    min_variance_percentile: 0.05     # 去掉方差最低 5%，可设 0 禁用
+
+  # CL（batch1–4）
+  CL:
+    min_detect_rate_global: 0.6
+    min_variance_percentile: 0.05
+
+# ------------------------------------------------------------
+# 差异分析（DE）配置
+# ------------------------------------------------------------
+DE:
+  allfat:
+    formula: "~ batch + group"       # limma 模型公式
+    contrast: "HO - WT"              # 主对比
+  CL:
+    formula: "~ batch + group"
+    contrast: "HO - WT"
+
+# ------------------------------------------------------------
+# PCA / Heatmap 设置
+# ------------------------------------------------------------
+PCA:
+  scale_features: true               # 是否对 features 做 Z-score
+  topN_variance: 500                 # 若过大可调到 300 / 200
+
+heatmap:
+  use_Z_score: true
+  topN_DE: 50                        # 选 FDR 最小的 topN feature
+  clustering_method: "ward.D2"
+  distance: "euclidean"
+
+# ------------------------------------------------------------
+# Class summary 设置
+# ------------------------------------------------------------
+class_summary:
+  # 若希望合并某些脂质类，可以设置为：
+  merge_map:
+    # example:
+    #   TG: ["TG", "TG-O", "TG-P"]
+  log_transform: true
+
+# ------------------------------------------------------------
+# Integration 准备
+# ------------------------------------------------------------
+integration:
+  output_dir: "results/lipid/integration/"
+  export_allfat: true
+  export_CL: true
+  add_gene_mapping: false            # 未来可加入 lipid-gene map
+
+
+# ============================================================
+# END
+# ============================================================

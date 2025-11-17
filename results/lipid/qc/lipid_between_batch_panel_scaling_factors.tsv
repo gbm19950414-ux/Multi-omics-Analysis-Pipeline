@@ -1,0 +1,5 @@
+batch	factor_between_panelA	n_features_used_panelA	factor_between_panelB	n_features_used_panelB	factor_final	source_panel
+batch1	1	48	NA	NA	1	PanelA
+batch2	1	48	4.305778370848097	3	1	PanelA
+batch3	1	48	1	3	1	PanelA
+batch4	NA	NA	0.8588330455183752	3	0.5291468120993253	PanelB_via_bridge
