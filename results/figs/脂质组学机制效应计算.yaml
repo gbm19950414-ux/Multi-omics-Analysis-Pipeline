@@ -1,0 +1,137 @@
+# ========== Metadata ==========
+figure: "6"                   # 如 "Figure 5"
+panel: "c"                    # 如 "C"
+title: "Mechanistic axis scores derived from lipidomics" 
+research_theme: "Mitochondrial cardiolipin homeostasis"
+
+# ========== 1. Research Question ==========
+research_question: >
+  Ephb1 缺失是否通过影响心磷脂的合成、重塑、氧化、转运和供给等关键机制轴，
+  改变线粒体膜心磷脂稳态，从而形成可量化的“机制瓶颈指纹”？
+
+# ========== 2. Hypothesis ==========
+hypothesis: >
+  与 WT 相比，Ephb1 缺失巨噬细胞在心磷脂合成/重塑/转运/供给/氧化轴上存在明显的机制瓶颈
+
+# ========== 3. Experimental Design ==========
+groups:
+  - name: WT
+    n: 0                     # 实际 n 由每批次纳入的 WT 样本数决定（per-batch 计算）
+    description: "Wild-type peritoneal macrophages, LC–MS-based lipidomics"
+  - name: HO
+    n: 0
+    description: "Ephb1 knockout peritoneal macrophages, 同一脂质组学流程"
+
+variables:
+  independent: "Genotype (WT vs Ephb1 HO), analysed per batch"
+  dependent: >
+    Lipidomic mechanistic axis scores (Synthesis / Remodeling / Oxidation /
+    Transport / Supply), derived from CL/PG、MLCL/CL、oxCL/CL、PG/PA、
+    ΣCL、ΣPG 等指标
+  controlled:
+    - "样本类型：均为小鼠腹腔巨噬细胞（同品系、相近年龄与性别构成）"
+    - "脂质提取与 LC–MS 测定流程一致，同一平台、同一内部标准体系"
+    - "批次内使用 QC 样本评估并校正漂移（PQN + panel scaling）"
+    - "机制指标统一基于批次内长表 lipid_long_dedup_pqn.tsv 计算"
+
+conditions:
+  stimuli: "Basal condition（无急性 LPS/Nigericin 等刺激）"
+  time_points: "Single time point at isolation/end of culture"
+  dose: ""
+  environment: "标准培养条件；但本分析为脂质组学数据二次分析，不直接操控环境变量"
+
+assay:
+  name: "LC–MS lipidomics (global + cardiolipin-focused)"
+  readouts:
+    - "批次内 PQN 归一化后的脂质长表：lipid_long_dedup_pqn.tsv"
+    - "脂质类别注释：Class (CL, MLCL, PG, PA, oxCL, PC, PE 等)"
+    - "每个样本的脂质峰强度 / 相对丰度"
+
+analysis:
+  preprocessing: >
+    在每个批次内使用 PQN 进行归一化，过滤低检测率和低方差特征；
+    使用去重后的长表 lipid_long_dedup_pqn.tsv 作为机制指标计算的基础。
+  normalization: >
+    将同一 Class 或同一机制相关类别下的脂质信号求和或求均值，
+    构建 ΣCL、ΣPG、ΣMLCL、ΣoxCL、ΣPC、ΣPE 等；
+    然后计算比值指标（CL/PG、MLCL/CL、oxCL/CL、PG/PA 等），
+    对每个指标在批次内按样本做 z-score 标准化。
+  statistics: > 
+    将多个指标按 sign matrix 方向性校准（统一为高 = 瓶颈更严重），
+    在每个机制轴内对相关指标的 z-score 求均值，得到 per-sample axis score；
+    在每个 batch × group 中对 axis score 求均值和标准差，
+    用于可视化和描述性比较（必要时可用线性模型/limma 检验 batch 内 HO vs WT 差异）。
+  visualization: >
+    (1) per-batch PCA / volcano / heatmap (见前序脚本)；
+    (2) 机制轴 score 的箱线图（per batch × group）；
+    (3) 机制轴 score 的热图（axis × batch_group）；
+    (4) per-batch 雷达图展示 HO 与 WT 的机制指纹差异。
+
+# ========== 4. Experimental Key Steps ==========
+key_steps:
+  - "基于批次内长表 lipid_long_dedup_pqn.tsv 过滤出需要的类：CL、MLCL、PG、PA、oxCL、PC、PE 等"
+  - "对每个样本计算 ΣCL、ΣPG、ΣMLCL、ΣoxCL、ΣPC、ΣPE 以及 PG/PA 等必要总量与比值指标"
+  - "使用预定义的指标配置表（lipid_mechanistic_indicator_config.yaml）统一指定公式与所需 Class"
+  - "使用方向性校准矩阵（lipid_mechanistic_indicator_sign_matrix.yaml）将各指标转换为“瓶颈强度”方向的一致 z-score"
+  - "在每个机制轴内对相关指标的校准后 z-score 取均值，生成 per-sample axis score"
+  - "按 batch × group 聚合，生成 axis mean score 和 sd，用于热图和雷达图展示"
+
+# ========== 5. Results（AI 用它写论文 Results 段） ==========
+results:
+  primary_findings: >
+    在所有批次中，Ephb1 缺失组（HO）显示出一致的机制轴改变：
+    Transport（转运轴）score 在 HO 中显著高于 WT，提示 CL 在内外膜间的分布/转运出现稳定瓶颈；
+    Supply（供给轴）score 在 HO 中整体偏低，对应 ΣCL 和 PG/PA 相关指标下降，
+    指示心磷脂总体容量与前体供应不足；
+    在多个批次（尤其是 batch2/3/4）中，Remodeling（重塑轴）score 也明显升高，
+    支持 MLCL/CL 异常、重塑效率下降的模型；
+    而 Oxidation（氧化轴）score 接近零，未见跨批次一致的氧化损伤信号。
+  quantitative_summary: >
+    在合并各批次后的描述性统计中，Transport 轴 HO–WT 均值差异约为 0.3–0.5 z-score，
+    Supply 轴则在 HO 中下降约 0.2–0.4 z-score；
+    Remodeling 轴在部分批次中 HO 相对 WT 升高约 0.3–0.6 z-score；
+    Oxidation 轴接近 0，FDR 校正后无显著差异。
+  alignment_with_hypothesis: >
+    结果与“Ephb1 缺失导致心磷脂重塑/转运轴瓶颈加重，而氧化轴变化有限”的假设高度一致，
+    表明 Ephb1 更可能通过调节 CL 的重塑、分布和供应来影响线粒体功能，
+    而不是通过显著放大 CL 氧化。
+
+# ========== 6. Interpretation（论文式推论） ==========
+interpretation:
+  biological_significance: >
+    机制轴分析将高维脂质组学数据压缩为具备生物含义的瓶颈 score，
+    揭示 Ephb1 缺失主要扰动心磷脂的重塑、供给和膜转运环节：
+    HO 细胞在缺乏 Ephb1 时更难维持正常的 CL–MLCL 循环和 IMM/OMM 分布，
+    伴随 CL 总量下降而非氧化损伤增加。
+    这种机制画像为后续在特定酶（如 TAZ/LYCAT）和转运因子（如 STARD7/MICOS 组件）层面做验证提供了优先级。
+  connection_to_storyline: >
+    本 panel 将脂质组学结果从“少量差异单脂质”提升到“机制瓶颈层面”的整合，
+    在论文中起到承上启下作用：
+    承接前文的 CL 总量/物种变化，量化其在不同机制轴上的倾向性；
+    同时为后续转录组机制基因集分析提供对照框架，支持 Ephb1–CL–NLRP3 轴的整合模型。
+  implications: >
+    该机制轴框架可以推广到其他线粒体疾病或炎症模型，
+    用同一套 CL/PG、MLCL/CL、oxCL/CL、PG/PA 等指标快速描绘 CL 稳态的瓶颈指纹，
+    为寻找药物干预靶点（如改善重塑或转运）提供定量依据。
+
+# ========== 7. Limitations / Alternative Explanations ==========
+limitations:
+  - "机制轴完全依赖于脂质组学数据和 Class 注释质量，未直接测定酶活性或膜转运速率"
+  - "部分轴（尤其是氧化轴）受限于可检测 oxCL 物种的数量和信噪比，可能低估轻度氧化变化"
+  - "同一指标在不同 batch 中的动态范围和技术噪音存在差异，虽然使用 z-score 标准化，但仍可能残留 batch 特异性偏差"
+  - "目前 axis score 主要基于稳态脂质谱（basal condition），未覆盖应激条件下的动态响应"
+
+alternative_explanations:
+  - "观察到的重塑与转运轴瓶颈可能部分源于整体线粒体量下降，而非单一机制环节功能缺陷"
+  - "某些指标（如 PG/PA）受上游磷脂代谢与 ER–mitochondria 接触的共同影响，难以完全区分供给 vs 转运的问题"
+  - "基因型相关的代谢背景（如脂滴、脂肪酸供给差异）也可能通过改变脂质底物池间接影响 CL pattern"
+
+# ========== 8. Next Step ==========
+next_step:
+  question_to_test: >
+    Ephb1 缺失导致的 CL 重塑与转运瓶颈，是否可以通过靶向 TAZ/LYCAT 或
+    STARD7/MICOS 轴的遗传或药理干预来逆转？
+  proposed_experiments:
+    - "在 WT 与 Ephb1 HO 巨噬细胞中，测定 TAZ/LYCAT 和 STARD7/MICOS 相关基因的表达及蛋白水平，与机制轴 score 做相关性分析"
+    - "通过过表达 TAZ 或 STARD7，或者使用心磷脂补充纳米盘，对 HO 细胞进行功能救援，检测 CL 组成、axis score 与 NLRP3 炎症小体激活情况的变化"
+    - "在急性 ROS/炎症应激（如 LPS+Nigericin）条件下重复脂质组学机制轴分析，评估 Ephb1 缺失是否放大应激诱导的 CL 瓶颈"

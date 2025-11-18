@@ -1,0 +1,75 @@
+# ============================================================
+# Lipid Mechanistic Indicators Definition File
+# 用于机制轴（Y₁–Y₅）脂质指标计算的统一配置
+# ============================================================
+
+mechanistic_axes:
+
+  Synthesis:  # 合成轴（PG → CL）
+    indicators:
+      - name: CL_PG_ratio
+        formula: "sum(CL) / sum(PG)"
+        description: "CL 与 PG 之比，表示 PG → CL 转化效率（合成能力）"
+      - name: sum_PG
+        formula: "sum(PG)"
+        description: "PG 前体总量，PG 上升可代表 CL 合成瓶颈"
+      - name: sum_CL
+        formula: "sum(CL)"
+        description: "CL 总量，也用于 Supply 轴"
+      - name: CL_species_distribution
+        formula: "distribution(CL[72-76])"
+        description: "CL 的链长分布模式是否偏离正常值（链长偏差代表异常）"
+
+  Remodeling:  # 重塑轴（MLCL ↔ CL）
+    indicators:
+      - name: MLCL_CL_ratio
+        formula: "sum(MLCL) / sum(CL)"
+        description: "MLCL / CL 比，反向指标：高值 = 重塑效率差"
+      - name: sum_MLCL
+        formula: "sum(MLCL)"
+        description: "MLCL 累积（重塑不足的产物）"
+      - name: FA_remodeling_distance
+        formula: "distance(CL_FA_pattern, normal_18_2_rich)"
+        description: "CL 的脂酰组成偏离正常 18:2 富集模式的程度"
+
+  Oxidation:  # 氧化损伤轴
+    indicators:
+      - name: oxCL_CL_ratio
+        formula: "sum(oxCL) / sum(CL)"
+        description: "氧化 CL / 总 CL 比例，反映氧化压力"
+      - name: sum_oxCL
+        formula: "sum(oxCL)"
+        description: "氧化 CL 总量"
+      - name: CL_oxidation_depth
+        formula: "proportion(multioxidized_CL)"
+        description: "多氧化产物（+2O, +4O）比例，越高越严重"
+
+  Transport:  # 膜转运与分布轴
+    indicators:
+      - name: IMM_OMM_CL_asymmetry
+        formula: "distance(CL_IMM, CL_OMM)"
+        description: "CL 内外膜分布偏离程度"
+      - name: PG_IMM_OMM_asymmetry
+        formula: "distance(PG_IMM, PG_OMM)"
+        description: "PG 内外膜分布偏离程度"
+      - name: PG_PA_ratio
+        formula: "sum(PG) / sum(PA)"
+        description: "PA → PG 前体转运效率（也用于 supply 轴）"
+
+  Supply:  # 供给轴（线粒体膜容量与 CL 供给）
+    indicators:
+      - name: sum_CL
+        formula: "sum(CL)"
+        description: "CL 总量（供应能力）"
+      - name: sum_PG
+        formula: "sum(PG)"
+        description: "PG 总前体量"
+      - name: PG_PA_ratio
+        formula: "sum(PG) / sum(PA)"
+        description: "PA → PG 的供给链效率"
+      - name: mito_lipid_mass
+        formula: "sum(PC + PE + CL)"
+        description: "线粒体膜容量"
+      - name: CL_fraction
+        formula: "sum(CL) / sum(PC + PE + CL)"
+        description: "CL 占比（内膜 cristae 完整性）"
