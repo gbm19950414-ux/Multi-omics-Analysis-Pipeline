@@ -1,0 +1,60 @@
+# ========== Metadata ==========
+figure: ""                   # string，图号，如 "Figure 1"
+panel: ""                    # string，Panel 名，如 "A"
+title: ""                    # 本 panel 的短标题：一句话说明做了什么
+
+# ========== Assets ==========
+figure_file: 
+supplementary_links:
+
+# ========== 研究问题（1–2 句即可） ==========
+purpose: 
+  transition_from_previous: ""   # 与上一节的衔接句（保持模板化）
+  chapter_position: ""      # 本节在整章中的位置/作用
+  main_point: ""            # 本节要回答的科学问题（1 句）
+  constraints:
+    - "不写背景"
+    - "不超过 1–2 句"
+    - "必须点名‘本节要解决的核心问题’"
+
+# ========== 本节原理（实验策略/设计理由）==========
+rationale: 
+  design_reasoning: ""      # 为什么选择此模型/刺激/对照
+  variable_logic: ""        # 本节关注的关键变量及操纵方式
+  core_justification: ""    # 最关键的一句理由（可作为自动摘要字段）
+  constraints:
+    - "通用实验原理（ELISA/WB/LPS+ATP 等）不写"
+    - "不写 SOP"
+    
+# ========== 方法（只写“差异性信息”）==========
+methods: 
+  sample_source: ""         # 动物 vs 原代
+  stimuli: ""               # ATP vs Nigericin / 浓度 / 时间
+  time_points: ""           # 关键时间点
+  dose: ""                  # 剂量信息（如 10 µM）
+  replicates: ""            # 生物学重复数 n
+  measurement_differences: "" # 本节独有的测定差异（如 flow vs plate reader）
+  minimal_info_summary: ""  # 自动写作用：整合后的最小必要信息
+  constraints:
+    - "不写操作步骤"
+    - "不写缓冲液组成"
+
+# ========== 结果（图→文字化表达）==========
+results: 
+  trend: ""                 # 数据趋势方向（升高/降低/无变化）
+  significance: ""          # 统计显著性（如 p<0.01）
+  comparative_statement: "" # 组间比较结果（KO vs WT…）
+  chain_conclusion: ""      # 链条句，如“高表达–高孔形成–高IL-1β”
+  figure_mapping: ""        # 对应的 figure/panel 编号
+  numerical_notes: ""       # 可选：fold change、效应量
+  auto_summary: ""          # 自动合句用：趋势 + 显著性 + 方向
+
+# ========== 小结/过渡（承上启下）==========
+summary: 
+  one_sentence_conclusion: "" # 本节一句话总结
+  implication: ""             # 暗示机制，但不拔高（如“提示执行端受限…”）
+  transition_to_next: ""      # 引到下一节要做什么
+  constraints:
+    - "不可拔高到整章结论"
+    - "保持‘提示 + 下一步’的力度"
+

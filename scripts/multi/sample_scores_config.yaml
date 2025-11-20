@@ -1,0 +1,28 @@
+# 1) RNA raw counts 矩阵（featureCounts 输出）
+rna_counts: "data/processed/rna/all_batches_featureCounts.tsv"
+
+# 2) 脂质表达矩阵（你上传的 log2 处理后表）
+lipid_matrix: "results/lipid/tables/lipid_matrix_allfat_log2_filtered.tsv"
+
+# 3) RNA–lipid 样本匹配表（你手工写的这个）
+sample_matching: "scripts/multi/sample_matching_batch1.tsv"
+
+# 4) 中介 M（RNA signaling/pathway）的 gene set YAML + 名称
+rna_M_yaml: "scripts/multi/ephb1_downstream_signaling_sets.yaml"
+rna_M_pathway: "EphB1_PGC1_NRF_mito_biogenesis"
+rna_M_registry: "scripts/multi/ephb1_downstream_signaling_sets_gene_registry.tsv"
+
+# 5) 机制轴 Y（RNA 版）的 gene set YAML + axis 名称
+rna_Y_yaml: "scripts/rna/rna_mechanistic_gene_sets.yaml"
+rna_Y_axis: "Supply"
+rna_Y_registry: "ref/gene_symbol_to_ensembl.tsv"
+
+# 6) 脂质版 Y：使用的 axis feature 集（可选）
+#   这里我设计为一个简单 TSV，而不是 YAML，方便你手动/脚本生成：
+#   列：feature_id, axis, effect_sign
+lipid_feature_set_tsv: "scripts/lipid/lipid_mechanistic_indicators.yaml"
+lipid_indicator_sign_yaml: "scripts/lipid/lipid_indicator_sign_matrix.yaml"
+lipid_Y_axis: "Supply"
+
+# 7) 输出目录
+outdir: "results/multiomics/tables/sample_scores"

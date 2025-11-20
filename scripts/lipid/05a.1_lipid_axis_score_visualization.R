@@ -11,6 +11,10 @@
 ##     1) per-sample 箱线图（axis × batch × group）
 ##     2) per-batch × group × axis 的热图
 ##     3) 按 batch 的“雷达风格”极坐标折线图（axis 做角度，score 做半径）
+##   ★ 额外集成：
+##     4) 每个指标在 HO vs WT 的差异检验（per-batch）
+##     5) 每个指标的箱线图（indicator × batch × group）
+##     6) 指标 Δmean( HO − WT ) 的热图 + 显著性星号
 ##
 ## 使用方式：
 ##   Rscript scripts/lipid/11_lipid_axis_score_visualization.R \
@@ -78,6 +82,17 @@ plot_radar_path <- file.path(
   plots_dir, "lipid_axis_score_radar_by_batch.png"
 )
 
+## --- NEW: 指标级输出路径 ---
+indicator_de_path <- file.path(
+  tables_dir, "lipid_mechanistic_indicator_DE_per_batch.tsv"
+)
+plot_indicator_box_path <- file.path(
+  plots_dir, "lipid_indicator_boxplot_by_batch_group.png"
+)
+plot_indicator_heatmap_path <- file.path(
+  plots_dir, "lipid_indicator_heatmap_logFC_per_batch.png"
+)
+
 cat("============================================================\n")
 cat("[INFO] 11_lipid_axis_score_visualization.R\n")
 cat("  input per-sample      : ", per_sample_path, "\n", sep = "")
@@ -85,6 +100,9 @@ cat("  input per-batch-group : ", per_batch_group_axis_path, "\n", sep = "")
 cat("  output boxplot  : ", plot_box_path, "\n", sep = "")
 cat("  output heatmap  : ", plot_heatmap_path, "\n", sep = "")
 cat("  output radar(polar) : ", plot_radar_path, "\n", sep = "")
+cat("  output indicator DE table : ", indicator_de_path, "\n", sep = "")
+cat("  output indicator boxplot  : ", plot_indicator_box_path, "\n", sep = "")
+cat("  output indicator heatmap  : ", plot_indicator_heatmap_path, "\n", sep = "")
 cat("============================================================\n\n")
 
 ## --------- 1. 读取数据 --------------------------------------
@@ -137,6 +155,9 @@ cat("  [INFO] 识别到 axis_score 列:\n    ",
 per_sample_bio <- per_sample %>%
   filter(!is.na(group))
 
+## 方便后续：axis 固定顺序
+axis_levels <- c("Synthesis", "Remodeling", "Oxidation", "Transport", "Supply")
+
 ## --------- 2. 箱线图：axis × batch × group ------------------
 
 cat("\n[STEP2] 生成 axis score 的 per-batch × group 箱线图...\n")
@@ -153,8 +174,6 @@ axis_long_ps <- per_sample_bio %>%
     axis = stringr::str_remove(axis_col, "_score$")
   )
 
-## 排序 axis（固定顺序：Synthesis, Remodeling, Oxidation, Transport, Supply）
-axis_levels <- c("Synthesis", "Remodeling", "Oxidation", "Transport", "Supply")
 axis_long_ps <- axis_long_ps %>%
   mutate(axis = factor(axis, levels = axis_levels))
 
@@ -211,19 +230,14 @@ heat_mat <- heat_mat_df %>%
   column_to_rownames(var = "axis") %>%
   as.matrix()
 
-## --- 关键修正：处理 heat_mat 中的 NA，避免 hclust/dist 出错 ---
-
+## 处理 NA，避免 pheatmap 内部 hclust 出错
 n_na_heat <- sum(is.na(heat_mat))
-
 if (n_na_heat > 0) {
   cat("  [WARN] Heatmap 矩阵中检测到 ", n_na_heat,
-      " 个 NA 单元格。仅用于可视化，",
-      "这些 NA 将被填为 0（轴的“中性”水平）。原始 TSV 保留 NA。\n",
-      sep = "")
+      " 个 NA 单元格。仅用于可视化，这些 NA 将被填为 0。\n", sep = "")
   heat_mat[is.na(heat_mat)] <- 0
 }
 
-## pheatmap
 pheatmap::pheatmap(
   heat_mat,
   scale = "none",
@@ -243,19 +257,18 @@ cat("  [OK] 写出热图: ", plot_heatmap_path, "\n", sep = "")
 
 cat("\n[STEP4] 生成按 batch 的雷达风格极坐标折线图...\n")
 
-## 从 per_batch_group_axis 里提取每个 batch × group × axis 的 mean_score
 radar_df <- per_batch_group_axis %>%
   filter(!is.na(group)) %>%
   mutate(
     axis = factor(axis, levels = axis_levels)
   )
 
-## 为 polar plot 准备：每个 batch 一块 facet，x=axis, y=mean_score, group=group
-## 为了让线闭合，可选地把首个 axis 再复制一遍到末尾
+## 复制首个 axis 到末尾，闭合曲线
 radar_df_closed <- radar_df %>%
   group_by(batch, group) %>%
   arrange(axis, .by_group = TRUE) %>%
   mutate(axis_index = as.numeric(axis)) %>%
+  ungroup() %>%
   bind_rows(
     radar_df %>%
       filter(!is.na(group)) %>%
@@ -266,11 +279,10 @@ radar_df_closed <- radar_df %>%
       group_by(batch, group) %>%
       arrange(axis_index, .by_group = TRUE) %>%
       slice(1L) %>%
-      mutate(axis_index = axis_index + length(axis_levels))
-  ) %>%
-  ungroup()
+      mutate(axis_index = axis_index + length(axis_levels)) %>%
+      ungroup()
+  )
 
-## 画极坐标折线图
 p_radar <- ggplot(radar_df_closed,
                   aes(x = axis_index, y = mean_score,
                       group = group, color = group)) +
@@ -285,21 +297,16 @@ p_radar <- ggplot(radar_df_closed,
     y = "Axis mean score"
   ) +
   theme(
-    axis.text.x = element_blank(), ## 用下面自定义标签
+    axis.text.x = element_blank(),
     panel.grid.minor = element_blank(),
     legend.position = "bottom"
   )
-
-## 给极坐标添加 axis 名字标签：使用 annotation_custom 会比较麻烦，
-## 这里直接在外圈加文本（在原 axis_index 位置）
-## 简单做法：生成一个辅助数据框，单独 geom_text
 
 axis_label_df <- data.frame(
   axis = factor(axis_levels, levels = axis_levels),
   axis_index = seq_along(axis_levels)
 )
 
-## 取所有 batch 的 y 最大值，作为标签半径
 max_score <- max(radar_df$mean_score, na.rm = TRUE)
 label_radius <- max_score * 1.2
 
@@ -315,10 +322,159 @@ ggsave(plot_radar_path, p_radar, width = 8, height = 6, dpi = 300)
 
 cat("  [OK] 写出雷达风格极坐标图: ", plot_radar_path, "\n", sep = "")
 
+## --------- 5. NEW: 指标级 HO vs WT 差异检验 ----------------
+
+cat("\n[STEP5] 指标级 HO vs WT 差异检验 (per-batch)...\n")
+
+## 识别“指标列”：所有 numeric 列里，排除 *_score（axis 分数）和显然不是指标的列
+numeric_cols <- names(per_sample_bio)[sapply(per_sample_bio, is.numeric)]
+indicator_cols <- setdiff(numeric_cols, axis_cols)
+
+## 如果你有一些“明显非指标的 numeric 列”（比如某些 ID），可在这里排除：
+indicator_cols <- setdiff(
+  indicator_cols,
+  c()  ## 如需排除的列名写在这里
+)
+
+cat("  [INFO] 识别到指标列 (", length(indicator_cols), "): ",
+    paste(indicator_cols, collapse = ", "), "\n", sep = "")
+
+## long 格式：batch × sample × group × indicator × value
+indicator_long <- per_sample_bio %>%
+  select(batch, sample_id, group, all_of(indicator_cols)) %>%
+  pivot_longer(
+    cols = all_of(indicator_cols),
+    names_to = "indicator",
+    values_to = "value"
+  )
+
+## 仅保留 HO / WT 两组，用于差异检验
+indicator_long_hw <- indicator_long %>%
+  filter(group %in% c("HO", "WT"))
+
+## 小工具：对某个 batch × indicator 做检验
+do_test_one <- function(df) {
+  vals_HO <- df$value[df$group == "HO"]
+  vals_WT <- df$value[df$group == "WT"]
+  
+  mean_HO <- if (length(vals_HO) > 0) mean(vals_HO, na.rm = TRUE) else NA_real_
+  mean_WT <- if (length(vals_WT) > 0) mean(vals_WT, na.rm = TRUE) else NA_real_
+  
+  if (length(vals_HO) >= 2 && length(vals_WT) >= 2) {
+    ## 这里用 t.test；如果你更喜欢 Wilcoxon，可改成 wilcox.test
+    tt <- try(stats::t.test(vals_HO, vals_WT), silent = TRUE)
+    pval <- if (inherits(tt, "try-error")) NA_real_ else tt$p.value
+  } else {
+    pval <- NA_real_
+  }
+  
+  tibble(
+    mean_HO = mean_HO,
+    mean_WT = mean_WT,
+    diff_HO_WT = mean_HO - mean_WT,
+    p_value = pval
+  )
+}
+
+indicator_de <- indicator_long_hw %>%
+  group_by(batch, indicator) %>%
+  group_modify(~ do_test_one(.x)) %>%
+  ungroup() %>%
+  mutate(
+    FDR = p.adjust(p_value, method = "BH")
+  )
+
+dir.create(tables_dir, showWarnings = FALSE, recursive = TRUE)
+readr::write_tsv(indicator_de, indicator_de_path)
+
+cat("  [OK] 指标级差异检验结果写出: ", indicator_de_path, "\n", sep = "")
+
+## --------- 6. NEW: 指标级箱线图 (indicator × batch × group) ----
+
+cat("\n[STEP6] 生成指标级箱线图 (indicator × batch × group)...\n")
+
+## 为了可读性，对 indicator 做一个固定顺序（按字母排序）
+indicator_levels <- sort(unique(indicator_long_hw$indicator))
+
+indicator_long_hw <- indicator_long_hw %>%
+  mutate(
+    indicator = factor(indicator, levels = indicator_levels)
+  )
+
+p_ind_box <- ggplot(indicator_long_hw,
+                    aes(x = group, y = value, fill = group)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.6) +
+  geom_jitter(width = 0.15, alpha = 0.4, size = 0.7) +
+  facet_grid(indicator ~ batch, scales = "free_y") +
+  theme_bw(base_size = 10) +
+  labs(
+    title = "Lipid mechanistic indicators by batch and group",
+    x = "Group",
+    y = "Indicator value"
+  ) +
+  theme(
+    strip.background = element_rect(fill = "grey92"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom"
+  )
+
+ggsave(plot_indicator_box_path, p_ind_box, width = 10, height = 10, dpi = 300)
+
+cat("  [OK] 写出指标箱线图: ", plot_indicator_box_path, "\n", sep = "")
+
+## --------- 7. NEW: 指标 Δmean 热图 + 显著性星号 ---------------
+
+cat("\n[STEP7] 生成指标 Δmean( HO − WT ) 热图 + 显著性星号...\n")
+
+## 准备绘图表：indicator × batch
+indicator_de_plot <- indicator_de %>%
+  mutate(
+    batch = factor(batch, levels = sort(unique(batch))),
+    indicator = factor(indicator, levels = indicator_levels),
+    sig_label = case_when(
+      is.na(p_value) ~ "",
+      p_value < 0.001 ~ "***",
+      p_value < 0.01  ~ "**",
+      p_value < 0.05  ~ "*",
+      TRUE ~ ""
+    )
+  )
+
+p_ind_heat <- ggplot(indicator_de_plot,
+                     aes(x = batch, y = indicator, fill = diff_HO_WT)) +
+  geom_tile(color = "grey80") +
+  geom_text(aes(label = sig_label), size = 2) +
+  scale_fill_gradient2(
+    name = "Δmean (HO − WT)",
+    low = "blue", mid = "white", high = "red",
+    midpoint = 0
+  ) +
+  theme_bw(base_size = 10) +
+  labs(
+    title = "Indicator-level HO − WT differences per batch",
+    x = "Batch",
+    y = "Indicator"
+  ) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid = element_blank()
+  )
+
+ggsave(plot_indicator_heatmap_path, p_ind_heat, width = 8, height = 10, dpi = 300)
+
+cat("  [OK] 写出指标 Δmean 热图: ", plot_indicator_heatmap_path, "\n", sep = "")
+
+## --------- DONE ------------------------------------------------
+
 cat("============================================================\n")
 cat("[DONE] 11_lipid_axis_score_visualization.R 完成。\n")
 cat("  产出：\n")
-cat("    - 箱线图：  batch × axis × group 层面的 score 分布\n")
-cat("    - 热图  ：  axis × (batch_group) 的 mean score\n")
-cat("    - 极坐标：  每个 batch 的 HO vs WT 机制谱对比\n")
+cat("    - Axis 级：\n")
+cat("        · 箱线图：  batch × axis × group 层面的 score 分布\n")
+cat("        · 热图  ：  axis × (batch_group) 的 mean score\n")
+cat("        · 极坐标：  每个 batch 的 HO vs WT 机制谱对比\n")
+cat("    - Indicator 级：\n")
+cat("        · DE 表  ：  每个指标在 HO vs WT 的 per-batch 检验 (mean_HO, mean_WT, diff, p, FDR)\n")
+cat("        · 箱线图：  indicator × batch × group 的原始值分布\n")
+cat("        · 热图  ：  indicator × batch 的 Δmean(HO − WT) + 显著性星号\n")
 cat("============================================================\n")

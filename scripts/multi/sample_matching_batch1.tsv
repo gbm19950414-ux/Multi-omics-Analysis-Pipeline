@@ -1,0 +1,6 @@
+sample_id   group   batch   rna_sample_id   lipid_sample_id
+S1          WT      batch1  batch1_WT_1     batch1_WT_1
+S2          WT      batch1  batch1_WT_2     batch1_WT_2
+S3          WT      batch1  batch1_WT_3     batch1_WT_4
+S4          HO      batch1  batch1_KO_1     batch1_HO_5
+S5          HO      batch1  batch1_KO_2     batch1_HO_6

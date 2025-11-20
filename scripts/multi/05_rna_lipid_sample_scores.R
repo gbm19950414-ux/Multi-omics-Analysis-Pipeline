@@ -1,0 +1,559 @@
+#!/usr/bin/env Rscript
+
+## ============================================================
+## 07_rna_lipid_sample_scores.R
+##
+## 目的：
+##   1) 从 RNA featureCounts 矩阵中，为每个样本计算：
+##        - M_score_RNA ：指定 pathway 的样本级通路活性
+##        - Y_score_RNA ：指定机制轴的样本级轴活性
+##   2) （可选）从脂质表达矩阵中，为每个样本计算：
+##        - Y_score_lipid ：指定脂质轴/feature 集的样本级表型
+##   3) 利用 sample_matching 表，将 RNA 样本名与脂质样本名对齐，
+##      输出一张适合中介分析的样本级汇总表。
+##
+## 输入（默认可被 config 覆盖）：
+##   1) RNA counts:
+##        data/processed/rna/all_batches_featureCounts.tsv
+##      要求至少包含列：
+##        GeneID, 以及若干 sample 列（与 sample_matching$rna_sample_id 对应）
+##
+##   2) 脂质矩阵（已 log2 处理）：
+##        data/processed/lipid/lipid_matrix_allfat_log2_filtered.tsv
+##      要求至少包含列：
+##        feature_id, 以及若干 sample 列（与 sample_matching$lipid_sample_id 对应）
+##
+##   3) RNA–lipid 样本匹配表：
+##        results/multiomics/sample_matching_batch1.tsv
+##      需要列：
+##        sample_id, group, batch, rna_sample_id, lipid_sample_id
+##
+##   4) RNA M（中介通路）的 gene set YAML：
+##        默认：scripts/multi/ephb1_downstream_signaling_sets.yaml
+##      顶层结构：
+##        pathways:
+##          <pathway_name>:
+##            axis: ...
+##            genes:
+##              - name: GeneSymbol
+##                gene_effect_sign: 1/-1
+##      需要配套 gene registry：
+##        同目录下 <yaml_basename>_gene_registry.tsv
+##        包含列：gene_symbol, ensembl_gene_id
+##
+##   5) RNA Y（机制轴）的 gene set YAML：
+##        默认：scripts/rna/rna_mechanistic_gene_sets.yaml
+##      顶层结构：
+##        axes:
+##          <axis_name>:
+##            modules:
+##              <module_name>:
+##                genes:
+##                  - name: GeneSymbol
+##                    gene_effect_sign: 1/-1
+##      同样需要 gene registry：
+##        <yaml_basename>_gene_registry.tsv
+##
+##   6) 脂质 Y 的 feature 集（可选）：
+##        默认：scripts/lipid/lipid_supply_axis_feature_set.tsv
+##      TSV 列：feature_id, axis, effect_sign
+##
+##   7) Config 文件（命令行第 1 个参数）：
+##        scripts/multiomics/00_sample_scores_config.yaml
+##
+## 输出：
+##   - results/multiomics/sample_scores/sample_scores_for_mediation.tsv
+##     列：
+##       sample_id, group, batch,
+##       M_score_RNA, Y_score_RNA,
+##       (可选) Y_score_lipid
+##
+## ============================================================
+
+suppressPackageStartupMessages({
+  library(yaml)
+  library(dplyr)
+  library(readr)
+  library(tidyr)
+  library(stringr)
+  library(purrr)
+  library(tools)
+  library(tibble)
+})
+
+`%||%` <- function(a, b) if (!is.null(a)) a else b
+
+## ---------------- 0. 解析 config -----------------------------
+
+args <- commandArgs(trailingOnly = TRUE)
+
+## 1) 必须有一个 config 路径
+config_path <- if (length(args) >= 1) {
+  args[1]
+} else {
+  stop("[ERROR] 必须在命令行提供配置文件路径，例如：\n",
+       "  Rscript scripts/multi/05_rna_lipid_sample_scores.R scripts/multi/sample_scores_config.yaml\n")
+}
+
+if (!file.exists(config_path)) {
+  stop("[ERROR] 找不到配置文件: ", config_path)
+}
+
+cat("[INFO] 使用配置文件: ", config_path, "\n", sep = "")
+cfg <- yaml::read_yaml(config_path)
+
+## 2) 强制要求的字段列表（全部从 config 读取）
+required_fields <- c(
+  "rna_counts",
+  "lipid_matrix",
+  "sample_matching",
+  "rna_M_yaml",
+  "rna_M_pathway",
+  "rna_Y_yaml",
+  "rna_Y_axis",
+  "lipid_feature_set_tsv",      # now used as lipid indicator def YAML
+  "lipid_indicator_sign_yaml",  # new: sign matrix YAML
+  "lipid_Y_axis",
+  "outdir"
+)
+
+missing_fields <- required_fields[!required_fields %in% names(cfg)]
+if (length(missing_fields) > 0) {
+  stop("[ERROR] 配置文件中缺少以下字段：\n  ",
+       paste(missing_fields, collapse = ", "),
+       "\n请在配置文件中补全。")
+}
+
+## 3) 不再使用脚本内默认值，全部直接从 cfg 取
+rna_counts      <- cfg$rna_counts
+lipid_matrix    <- cfg$lipid_matrix
+sample_matching <- cfg$sample_matching
+
+rna_M_yaml      <- cfg$rna_M_yaml
+rna_M_pathway   <- cfg$rna_M_pathway
+
+rna_Y_yaml      <- cfg$rna_Y_yaml
+rna_Y_axis      <- cfg$rna_Y_axis
+
+lipid_feature_set_tsv   <- cfg$lipid_feature_set_tsv
+lipid_indicator_sign_yaml <- cfg$lipid_indicator_sign_yaml
+lipid_Y_axis            <- cfg$lipid_Y_axis
+
+outdir           <- cfg$outdir
+
+cat("============================================================\n")
+cat("[INFO] 05_rna_lipid_sample_scores.R\n")
+cat("  RNA counts       : ", rna_counts,      "\n", sep = "")
+cat("  Lipid matrix     : ", lipid_matrix,    "\n", sep = "")
+cat("  Sample matching  : ", sample_matching, "\n", sep = "")
+cat("  RNA M YAML       : ", rna_M_yaml,      "\n", sep = "")
+cat("  RNA M pathway    : ", rna_M_pathway,   "\n", sep = "")
+cat("  RNA Y YAML       : ", rna_Y_yaml,      "\n", sep = "")
+cat("  RNA Y axis       : ", rna_Y_axis,      "\n", sep = "")
+cat("  RNA M registry    : ", cfg$rna_M_registry %||% "(auto *_gene_registry.tsv)", "\n", sep = "")
+cat("  RNA Y registry    : ", cfg$rna_Y_registry %||% "(auto *_gene_registry.tsv)", "\n", sep = "")
+cat("  Lipid indicator def : ", lipid_feature_set_tsv,      "\n", sep = "")
+cat("  Lipid sign YAML     : ", lipid_indicator_sign_yaml,  "\n", sep = "")
+cat("  Lipid Y axis        : ", lipid_Y_axis,               "\n", sep = "")
+cat("  Outdir           : ", outdir,          "\n", sep = "")
+cat("============================================================\n\n")
+
+dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
+## ---------------- helpers ------------------------------------
+
+## 按行对矩阵做 z-score（每个 feature 在样本间标准化）
+row_zscore <- function(mat) {
+  m <- rowMeans(mat, na.rm = TRUE)
+  s <- apply(mat, 1, sd, na.rm = TRUE)
+  s[s == 0 | is.na(s)] <- 1
+  z <- (mat - m) / s
+  z
+}
+
+## 根据 gene 表 + RNA expr 矩阵计算 sample-level score
+## expr_mat: matrix[genes x samples]，行名为 GeneID
+## gene_tbl: 必须包含列 GeneID, effect_sign_col
+compute_score_rna <- function(expr_mat, gene_tbl, effect_sign_col = "gene_effect_sign") {
+  gene_tbl <- gene_tbl %>%
+    filter(!is.na(GeneID)) %>%
+    distinct(GeneID, .keep_all = TRUE)
+
+  common_genes <- intersect(rownames(expr_mat), gene_tbl$GeneID)
+  if (length(common_genes) == 0) {
+    stop("[ERROR] compute_score_rna: 当前 gene 集在表达矩阵中一个基因都没匹配上。")
+  }
+
+  expr_sub <- expr_mat[common_genes, , drop = FALSE]
+  gene_tbl_sub <- gene_tbl %>%
+    filter(GeneID %in% common_genes) %>%
+    arrange(match(GeneID, rownames(expr_sub)))
+
+  if (!all(rownames(expr_sub) == gene_tbl_sub$GeneID)) {
+    stop("[ERROR] compute_score_rna: GeneID 对齐失败。")
+  }
+
+  sign_vec <- as.numeric(gene_tbl_sub[[effect_sign_col]])
+  sign_vec[is.na(sign_vec)] <- 1
+
+  z_mat <- row_zscore(expr_sub)
+  eff_mat <- z_mat * sign_vec
+
+  score <- colMeans(eff_mat, na.rm = TRUE)
+  score
+}
+
+## 根据 feature set + lipid 矩阵计算 sample-level score
+## lipid_mat: matrix[features x samples]，行名为 feature_id
+## feat_tbl: 必须包含列 feature_id, effect_sign
+compute_score_lipid <- function(lipid_mat, feat_tbl) {
+  feat_tbl <- feat_tbl %>%
+    filter(!is.na(feature_id)) %>%
+    distinct(feature_id, .keep_all = TRUE)
+
+  common_feats <- intersect(rownames(lipid_mat), feat_tbl$feature_id)
+  if (length(common_feats) == 0) {
+    stop("[ERROR] compute_score_lipid: 当前 feature 集在脂质矩阵中一个 feature 都没匹配上。")
+  }
+
+  lipid_sub <- lipid_mat[common_feats, , drop = FALSE]
+  feat_tbl_sub <- feat_tbl %>%
+    filter(feature_id %in% common_feats) %>%
+    arrange(match(feature_id, rownames(lipid_sub)))
+
+  if (!all(rownames(lipid_sub) == feat_tbl_sub$feature_id)) {
+    stop("[ERROR] compute_score_lipid: feature_id 对齐失败。")
+  }
+
+  sign_vec <- as.numeric(feat_tbl_sub$effect_sign)
+  sign_vec[is.na(sign_vec)] <- 1
+
+  z_mat <- row_zscore(lipid_sub)
+  eff_mat <- z_mat * sign_vec
+
+  score <- colMeans(eff_mat, na.rm = TRUE)
+  score
+}
+
+## ---------------- 1. 读取 sample_matching -------------------
+
+if (!file.exists(sample_matching)) {
+  stop("[ERROR] 找不到 sample_matching 表: ", sample_matching)
+}
+
+cat("[STEP1] 读取样本匹配表: ", sample_matching, "\n", sep = "")
+sm <- readr::read_tsv(sample_matching, show_col_types = FALSE)
+
+## 如果只读出了一列，且这一列包含多个用空白分隔的名字，说明分隔符不匹配，尝试用空白分隔重新读取
+if (length(colnames(sm)) == 1 && grepl("\\s+", colnames(sm)[1])) {
+  warning("[WARN] 检测到 sample_matching 只包含一个列名，疑似整行未被拆分，将使用 read_table() 以空白分隔重新读取。")
+  sm <- readr::read_table(sample_matching, show_col_types = FALSE)
+}
+
+## 再做一次列名清洗（去掉 BOM 和首尾空白）
+colnames(sm) <- gsub("\ufeff", "", colnames(sm))
+colnames(sm) <- trimws(colnames(sm))
+
+required_sm_cols <- c("sample_id", "group", "batch", "rna_sample_id", "lipid_sample_id")
+if (!all(required_sm_cols %in% colnames(sm))) {
+  stop("[ERROR] sample_matching 必须包含列: ",
+       paste(required_sm_cols, collapse = ", "),
+       "\n实际列名: ", paste(colnames(sm), collapse = ", "))
+}
+
+cat("  [sample_matching] nrow = ", nrow(sm), "\n", sep = "")
+
+## ---------------- 2. 读取 RNA counts 并构建 expr_mat -------
+
+if (!file.exists(rna_counts)) {
+  stop("[ERROR] 找不到 RNA counts 表: ", rna_counts)
+}
+
+cat("\n[STEP2] 读取 RNA counts 矩阵: ", rna_counts, "\n", sep = "")
+rna_counts_tbl <- readr::read_tsv(rna_counts, show_col_types = FALSE)
+
+if (!"GeneID" %in% colnames(rna_counts_tbl)) {
+  stop("[ERROR] RNA counts 表中缺少 GeneID 列。")
+}
+
+rna_samples <- unique(sm$rna_sample_id)
+missing_rna_samples <- setdiff(rna_samples, colnames(rna_counts_tbl))
+if (length(missing_rna_samples) > 0) {
+  stop("[ERROR] 下列 rna_sample_id 在 RNA counts 表中找不到列: ",
+       paste(missing_rna_samples, collapse = ", "))
+}
+
+rna_expr_log2 <- rna_counts_tbl %>%
+  dplyr::select(GeneID, dplyr::all_of(rna_samples)) %>%
+  column_to_rownames("GeneID") %>%
+  as.matrix()
+
+rna_expr_log2 <- log2(rna_expr_log2 + 1)
+
+cat("  [rna_expr_log2] genes = ", nrow(rna_expr_log2),
+    " ; samples = ", ncol(rna_expr_log2), "\n", sep = "")
+
+## ---------------- 3. RNA M_score: pathway YAML --------------
+
+cat("\n[STEP3] 计算 RNA M_score（通路级，中介变量）...\n")
+
+if (!file.exists(rna_M_yaml)) {
+  stop("[ERROR] 找不到 RNA M YAML: ", rna_M_yaml)
+}
+
+M_cfg <- yaml::read_yaml(rna_M_yaml)
+if (is.null(M_cfg$pathways)) {
+  stop("[ERROR] RNA M YAML 中未找到 'pathways' 顶层字段。")
+}
+
+M_pathway_list <- M_cfg$pathways[[rna_M_pathway]]
+if (is.null(M_pathway_list)) {
+  stop("[ERROR] 在 RNA M YAML 中找不到指定 pathway: ", rna_M_pathway)
+}
+
+M_gene_tbl_sym <- purrr::map_dfr(M_pathway_list$genes, function(g) {
+  tibble::tibble(
+    gene_symbol      = g$name,
+    gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
+  )
+})
+
+yaml_dir_M  <- dirname(rna_M_yaml)
+yaml_base_M <- tools::file_path_sans_ext(basename(rna_M_yaml))
+default_registry_M  <- file.path(yaml_dir_M, paste0(yaml_base_M, "_gene_registry.tsv"))
+registry_M <- cfg$rna_M_registry %||% default_registry_M
+
+if (!file.exists(registry_M)) {
+  stop("[ERROR] 找不到 RNA M gene registry: ", registry_M,
+       "\n请在配置文件中通过 rna_M_registry 指定，或在 YAML 同目录下生成 *_gene_registry.tsv。")
+}
+
+reg_M <- readr::read_tsv(registry_M, show_col_types = FALSE)
+if (!all(c("gene_symbol", "ensembl_gene_id") %in% colnames(reg_M))) {
+  stop("[ERROR] RNA M gene registry 必须包含 gene_symbol, ensembl_gene_id。")
+}
+
+M_gene_tbl <- M_gene_tbl_sym %>%
+  left_join(reg_M %>% dplyr::select(gene_symbol, ensembl_gene_id),
+            by = "gene_symbol") %>%
+  rename(GeneID = ensembl_gene_id)
+
+cat("  [RNA M gene set] n_gene = ", nrow(M_gene_tbl),
+    " ; matched Ensembl = ", sum(!is.na(M_gene_tbl$GeneID)), "\n", sep = "")
+
+M_score_RNA <- compute_score_rna(rna_expr_log2, M_gene_tbl, effect_sign_col = "gene_effect_sign")
+
+## ---------------- 4. RNA Y_score: mechanistic axis ----------
+
+cat("\n[STEP4] 计算 RNA Y_score（机制轴级）...\n")
+
+if (!file.exists(rna_Y_yaml)) {
+  stop("[ERROR] 找不到 RNA Y YAML: ", rna_Y_yaml)
+}
+
+Y_cfg <- yaml::read_yaml(rna_Y_yaml)
+if (is.null(Y_cfg$axes)) {
+  stop("[ERROR] RNA Y YAML 中未找到 'axes' 顶层字段。")
+}
+
+if (is.null(Y_cfg$axes[[rna_Y_axis]])) {
+  stop("[ERROR] 在 RNA Y YAML 中找不到指定 axis: ", rna_Y_axis)
+}
+
+axis_obj <- Y_cfg$axes[[rna_Y_axis]]
+
+Y_gene_tbl_sym <- purrr::imap_dfr(
+  axis_obj$modules,
+  function(mod, mod_name) {
+    genes <- mod$genes
+    if (is.null(genes)) {
+      return(tibble::tibble(
+        module           = character(0),
+        gene_symbol      = character(0),
+        gene_effect_sign = numeric(0)
+      ))
+    }
+    purrr::map_dfr(genes, function(g) {
+      tibble::tibble(
+        module           = mod_name,
+        gene_symbol      = g$name,
+        gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
+      )
+    })
+  }
+)
+
+yaml_dir_Y  <- dirname(rna_Y_yaml)
+yaml_base_Y <- tools::file_path_sans_ext(basename(rna_Y_yaml))
+default_registry_Y  <- file.path(yaml_dir_Y, paste0(yaml_base_Y, "_gene_registry.tsv"))
+registry_Y <- cfg$rna_Y_registry %||% default_registry_Y
+
+if (!file.exists(registry_Y)) {
+  stop("[ERROR] 找不到 RNA Y gene registry: ", registry_Y,
+       "\n请在配置文件中通过 rna_Y_registry 指定，或为 rna_mechanistic_gene_sets.yaml 生成对应 *_gene_registry.tsv。")
+}
+
+reg_Y <- readr::read_tsv(registry_Y, show_col_types = FALSE)
+if (!all(c("gene_symbol", "ensembl_gene_id") %in% colnames(reg_Y))) {
+  stop("[ERROR] RNA Y gene registry 必须包含 gene_symbol, ensembl_gene_id。")
+}
+
+Y_gene_tbl <- Y_gene_tbl_sym %>%
+  left_join(reg_Y %>% dplyr::select(gene_symbol, ensembl_gene_id),
+            by = "gene_symbol") %>%
+  rename(GeneID = ensembl_gene_id)
+
+cat("  [RNA Y axis gene set] axis = ", rna_Y_axis,
+    " ; n_gene = ", nrow(Y_gene_tbl),
+    " ; matched Ensembl = ", sum(!is.na(Y_gene_tbl$GeneID)), "\n", sep = "")
+
+Y_score_RNA <- compute_score_rna(rna_expr_log2, Y_gene_tbl, effect_sign_col = "gene_effect_sign")
+
+## ---------------- 5. 脂质 Y_score（可选） -------------------
+
+has_lipid_scores <- FALSE
+Y_score_lipid <- NULL
+
+if (!is.null(lipid_matrix) && file.exists(lipid_matrix) &&
+    !is.null(lipid_feature_set_tsv) && file.exists(lipid_feature_set_tsv) &&
+    !is.null(lipid_indicator_sign_yaml) && file.exists(lipid_indicator_sign_yaml)) {
+
+  cat("\n[STEP5] 计算脂质 Y_score（", lipid_Y_axis, " 轴）...\n", sep = "")
+
+  lipid_tbl <- readr::read_tsv(lipid_matrix, show_col_types = FALSE)
+
+  if (!"feature_id" %in% colnames(lipid_tbl)) {
+    stop("[ERROR] 脂质矩阵缺少 feature_id 列。")
+  }
+
+  lipid_samples <- unique(sm$lipid_sample_id)
+  missing_lipid_samples <- setdiff(lipid_samples, colnames(lipid_tbl))
+  if (length(missing_lipid_samples) > 0) {
+    stop("[ERROR] 下列 lipid_sample_id 在脂质矩阵中找不到列: ",
+         paste(missing_lipid_samples, collapse = ", "))
+  }
+
+  lipid_mat <- lipid_tbl %>%
+    dplyr::select(feature_id, dplyr::all_of(lipid_samples)) %>%
+    column_to_rownames("feature_id") %>%
+    as.matrix()
+
+  cat("  [lipid_mat] features = ", nrow(lipid_mat),
+      " ; samples = ", ncol(lipid_mat), "\n", sep = "")
+
+  # --- 新实现：基于 YAML 定义的 mechanistic indicators 和 sign matrix 计算样本级脂质 Y_score ---
+
+  if (!"Class" %in% colnames(lipid_tbl)) {
+    stop("[ERROR] 脂质矩阵缺少 Class 列，无法按脂质类别汇总指标。")
+  }
+
+  class_sum <- lipid_tbl %>%
+    dplyr::filter(Class %in% c("CL", "PG", "PA", "PC", "PE")) %>%
+    dplyr::group_by(Class) %>%
+    dplyr::summarise(
+      dplyr::across(dplyr::all_of(lipid_samples), ~ sum(.x, na.rm = TRUE)),
+      .groups = "drop"
+    )
+
+  get_class_vec <- function(cls) {
+    if (cls %in% class_sum$Class) {
+      as.numeric(class_sum[class_sum$Class == cls, lipid_samples, drop = FALSE])
+    } else {
+      rep(0, length(lipid_samples))
+    }
+  }
+
+  sum_CL <- get_class_vec("CL")
+  sum_PG <- get_class_vec("PG")
+  sum_PA <- get_class_vec("PA")
+  sum_PC <- get_class_vec("PC")
+  sum_PE <- get_class_vec("PE")
+  sum_PCPECL <- sum_PC + sum_PE + sum_CL
+
+  eps <- 1e-6
+  PG_PA_ratio    <- sum_PG / pmax(sum_PA, eps)
+  mito_lipid_mass <- sum_PCPECL
+  CL_fraction     <- sum_CL / pmax(sum_PCPECL, eps)
+
+  if (!identical(lipid_Y_axis, "Supply")) {
+    stop("[ERROR] 当前脚本的脂质 Y_score 仅实现了 Supply 轴的样本级计算；",
+         "其它轴暂未在 sample-level 实现（因指标依赖亚细胞分布/异质度等信息）。\n",
+         "如需支持其它轴，请在脚本中扩展对应的指标计算。")
+  }
+
+  indicator_mat <- rbind(
+    sum_CL         = sum_CL,
+    sum_PG         = sum_PG,
+    PG_PA_ratio    = PG_PA_ratio,
+    mito_lipid_mass = mito_lipid_mass,
+    CL_fraction    = CL_fraction
+  )
+  colnames(indicator_mat) <- lipid_samples
+
+  if (!file.exists(lipid_indicator_sign_yaml)) {
+    stop("[ERROR] 找不到脂质指标方向矩阵 YAML: ", lipid_indicator_sign_yaml)
+  }
+  sign_cfg <- yaml::read_yaml(lipid_indicator_sign_yaml)
+
+  axis_sign_list <- sign_cfg[[lipid_Y_axis]]
+  if (is.null(axis_sign_list)) {
+    stop("[ERROR] 在脂质指标方向矩阵 YAML 中找不到轴: ", lipid_Y_axis)
+  }
+
+  indicator_names <- rownames(indicator_mat)
+  bottleneck_sign <- sapply(indicator_names, function(ind) {
+    info <- axis_sign_list[[ind]]
+    if (is.null(info) || is.null(info$bottleneck_sign)) {
+      warning("[WARN] 在 sign YAML 中找不到 ", lipid_Y_axis, " / ", ind,
+              " 的 bottleneck_sign，默认使用 +1。")
+      1
+    } else {
+      as.numeric(info$bottleneck_sign)
+    }
+  })
+  names(bottleneck_sign) <- indicator_names
+
+  z_ind_mat <- row_zscore(indicator_mat)
+  eff_ind_mat <- z_ind_mat * bottleneck_sign
+
+  Y_score_lipid_full <- colMeans(eff_ind_mat, na.rm = TRUE)
+
+  has_lipid_scores <- TRUE
+  Y_score_lipid <- Y_score_lipid_full
+} else {
+  cat("\n[STEP5] 未提供完整脂质矩阵 / 指标定义 YAML / 指标方向 YAML，跳过 Y_score_lipid 计算。\n")
+}
+
+## ---------------- 6. 汇总样本级得分并写出 -------------------
+
+cat("\n[STEP6] 汇总样本级得分并写出...\n")
+
+score_tbl <- sm %>%
+  dplyr::mutate(
+    group = group,
+    batch = batch
+  ) %>%
+  dplyr::mutate(
+    M_score_RNA   = M_score_RNA[match(rna_sample_id, names(M_score_RNA))],
+    Y_score_RNA   = Y_score_RNA[match(rna_sample_id, names(Y_score_RNA))]
+  )
+
+if (has_lipid_scores) {
+  score_tbl <- score_tbl %>%
+    dplyr::mutate(
+      Y_score_lipid = Y_score_lipid[match(lipid_sample_id, names(Y_score_lipid))]
+    )
+}
+
+out_path <- file.path(outdir, "sample_scores_for_mediation.tsv")
+readr::write_tsv(score_tbl, out_path)
+
+cat("  [OK] 写出样本级得分表: ", out_path, "\n", sep = "")
+cat("  列包括：sample_id, group, batch, rna_sample_id, lipid_sample_id,\n")
+cat("          M_score_RNA, Y_score_RNA",
+    if (has_lipid_scores) ", Y_score_lipid\n" else "\n", sep = "")
+
+cat("============================================================\n")
+cat("[DONE] 07_rna_lipid_sample_scores.R 完成。\n")
+cat("  下一步：可将此表作为 08_mediation_analysis_minimal.R 的输入，\n")
+cat("          选择适当的 M_score / Y_score 列进行中介分析。\n")
+cat("============================================================\n")
