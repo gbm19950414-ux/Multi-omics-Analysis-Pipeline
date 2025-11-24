@@ -1,0 +1,249 @@
+# ============================================================
+# schema.yaml v2 — Model Panel (Conceptual / Mechanistic Diagram)
+# Figure 6C：多批次双组学 + CL panel 的数据处理流程图（pipeline）
+# ============================================================
+
+meta:
+  panel_type: "model"       # 依旧使用 model 类型，但本 panel 是“流程图型 model”
+  figure: "Figure 6"
+  panel: "C"
+  short_title: "RNA-seq, lipidomics and CL panel processing pipelines"
+  chapter: "Results – Data processing and mechanistic indicators"
+  role_in_paper: >
+    以一张流程图的形式，向审稿人交代 RNA-seq、非靶向脂质组和靶向 CL panel
+    的多批次数据是如何从原始测序/质谱信号，经过 QC、归一化和建模，
+    被压缩为用于下游多组学分析的“机制轴 Z 与 CL 机制指标”的。
+
+# ---------- 1. Conceptual Goal（这张图要解释什么？） ----------
+concept_goal:
+  core_message: >
+    本图的核心信息是：我们在多批次设计下，对 RNA-seq、脂质组和 CL panel
+    分别采用了有据可依且相互协调的数据处理流程，
+    最终将复杂的原始数据压缩为少量结构化的机制指标和轴级分数。
+  problem_being_explained: >
+    读者/审稿人看到后续的机制轴 Z、CL/PG 等指标时，
+    需要知道这些量是如何从原始数据一步步处理而来，
+    本图回答的就是“每条组学线从 raw data 到机制指标的路径是什么”。
+
+# ---------- 2. Mechanistic Elements（这里改成“流程节点”） ----------
+mechanism:
+  key_nodes:
+    # --- RNA-seq pipeline nodes ---
+    - name: "RNA-seq (3 batches) – raw reads"
+      description: >
+        来自 3 个独立批次的原始 RNA-seq FASTQ 文件，HO 与 WT 巨噬细胞的测序数据。
+    - name: "RNA-seq – raw QC & trimming (FastQC / fastp)"
+      description: >
+        使用 FastQC 评估原始读长质量，fastp 进行接头去除、低质量碱基裁剪和基础过滤，
+        生成质控报告和清洗后的 reads。
+    - name: "RNA-seq – alignment & gene-level counts (STAR + featureCounts)"
+      description: >
+        将清洗后的 reads 对齐到参考基因组（STAR），
+        随后使用 featureCounts 在基因层面进行计数，得到每个样本的基因 counts 矩阵。
+    - name: "RNA-seq – normalization & batch-aware modeling (DESeq2: ~ batch + group)"
+      description: >
+        合并各批次 counts 并在 DESeq2 中使用 ~ batch + group 的设计，
+        同时建模批次效应与 HO vs WT 组别效应，得到稳健的差异分析框架。
+    - name: "RNA-seq – gene-level log2FC (per batch & overall)"
+      description: >
+        从 DESeq2 模型和交互模型中提取每个基因在不同批次的 log2FC，
+        以及跨批次整合的效应，用作后续机制基因集得分的输入。
+    - name: "RNA-seq – mechanism gene-set Z (RNA mechanistic axes)"
+      description: >
+        利用预先定义的机制基因集（含 gene_effect_sign），
+        在每个批次内将基因层 log2FC 聚合为机制轴 Z，
+        得到 RNA 层面的合成轴、重塑轴、氧化轴、transport/supply 等轴分数。
+
+    # --- Lipidomics pipeline nodes ---
+    - name: "Untargeted lipidomics (batches 1–3) – raw features"
+      description: >
+        3 个批次的非靶向脂质组原始峰表/feature 表，
+        包含 CL、PG、MLCL 等多种脂质种类的信号强度。
+    - name: "Lipidomics – feature-level QC & dedup"
+      description: >
+        在 feature 层面进行去重和 QC 过滤：基于 QC 样本的重复性、CV、强度、
+        保留时间稳定性等，筛除不可靠 feature，得到用于定量的高质量 feature 集。
+    - name: "Lipidomics – within-batch normalization (PQN to QC median profile)"
+      description: >
+        在每个批次内部，以 QC 样本的 median profile 为参照，
+        通过 PQN（probabilistic quotient normalization）对样本间整体强度差异进行归一化。
+    - name: "Lipidomics – between-batch correction & ALR/CLR (optional global analyses)"
+      description: >
+        在需要进行跨批次整体脂质组比较、PCA 或 clustering 时，
+        对 PQN 后的数据进行 batch correction（如 ComBat）以及 ALR/CLR 变换，
+        用于全局脂质组模式的分析（不直接影响机制指标计算）。
+    - name: "Lipidomics – derivation of CL/PG, MLCL/CL, oxCL/CL, ΣCL, ΣPG"
+      description: >
+        以归一化后的强度为基础，按脂质类别求和或比值，
+        得到 CL/PG、MLCL/CL、oxCL/CL、总 CL、总 PG 等机制相关脂质指标。
+    - name: "Lipidomics – lipid mechanistic Z scores (per-batch axes)"
+      description: >
+        在每个批次内，对上述机制指标进行标准化（z-score），
+        并按预定义 sign matrix 投影到脂质层面的合成轴、重塑轴、氧化轴、供应轴等，
+        得到“脂质机制轴 Z”。
+
+    # --- Targeted CL panel pipeline nodes ---
+    - name: "Targeted CL panel (batch 4) – CL species measurements"
+      description: >
+        单独批次的靶向 CL panel，测定多种 CL 物种的绝对/相对含量，
+        精细刻画 CL 组成和氧化特征。
+    - name: "CL panel – derived indices (total CL, oxidation index, composition metrics)"
+      description: >
+        从靶向 CL 数据中计算总 CL、CL 氧化指数以及其他组成相关指标，
+        将复杂的 CL 物种谱压缩为少量机制性指标。
+    - name: "CL panel – validation phenotypes / mechanistic indicators"
+      description: >
+        将 CL panel 的衍生指标作为“验证表型/机制 readouts”，
+        用来校准和支撑非靶向脂质轴中关于 CL 含量与氧化的结论。
+
+    # --- Pipeline outputs for downstream multi-omics analysis ---
+    - name: "Pipeline outputs – axis-level scores and CL indicators for integration"
+      description: >
+        三条 pipeline 的终点：RNA 机制轴 Z、脂质机制轴 Z 以及靶向 CL 指标。
+        这些结构化输出将作为后续多组学整合、上游通路分析和中介分析的输入。
+
+  key_edges:
+    # RNA-seq branch
+    - from: "RNA-seq (3 batches) – raw reads"
+      to: "RNA-seq – raw QC & trimming (FastQC / fastp)"
+      type: "required_for"
+      evidence: "实际脚本 01_fastqc.sh 与 02_fastp.sh。"
+    - from: "RNA-seq – raw QC & trimming (FastQC / fastp)"
+      to: "RNA-seq – alignment & gene-level counts (STAR + featureCounts)"
+      type: "required_for"
+      evidence: "实际脚本 03_star_index.sh、04_star_align.sh 与 05_featureCounts.sh。"
+    - from: "RNA-seq – alignment & gene-level counts (STAR + featureCounts)"
+      to: "RNA-seq – normalization & batch-aware modeling (DESeq2: ~ batch + group)"
+      type: "required_for"
+      evidence: "实际脚本 07_merge_counts.R 与 08_deseq2.R。"
+    - from: "RNA-seq – normalization & batch-aware modeling (DESeq2: ~ batch + group)"
+      to: "RNA-seq – gene-level log2FC (per batch & overall)"
+      type: "required_for"
+      evidence: "在 DESeq2 模型中提取 per-batch 与整体 log2FC。"
+    - from: "RNA-seq – gene-level log2FC (per batch & overall)"
+      to: "RNA-seq – mechanism gene-set Z (RNA mechanistic axes)"
+      type: "required_for"
+      evidence: "实际脚本 09a_rna_mechanistic_axis_scores.R。"
+    - from: "RNA-seq – mechanism gene-set Z (RNA mechanistic axes)"
+      to: "Pipeline outputs – axis-level scores and CL indicators for integration"
+      type: "required_for"
+      evidence: "RNA 轴 Z 将作为后续多组学整合的输入。"
+
+    # Lipidomics branch
+    - from: "Untargeted lipidomics (batches 1–3) – raw features"
+      to: "Lipidomics – feature-level QC & dedup"
+      type: "required_for"
+      evidence: "实际脚本 03_dedup_and_qc_filter.R。"
+    - from: "Lipidomics – feature-level QC & dedup"
+      to: "Lipidomics – within-batch normalization (PQN to QC median profile)"
+      type: "required_for"
+      evidence: "实际脚本 04_within_batch_pqn.R。"
+    - from: "Lipidomics – within-batch normalization (PQN to QC median profile)"
+      to: "Lipidomics – between-batch correction & ALR/CLR (optional global analyses)"
+      type: "associate"
+      evidence: "当需要进行全局脂质组比较或可视化时使用，机制指标计算本身只依赖批次内标准化。"
+    - from: "Lipidomics – within-batch normalization (PQN to QC median profile)"
+      to: "Lipidomics – derivation of CL/PG, MLCL/CL, oxCL/CL, ΣCL, ΣPG"
+      type: "required_for"
+      evidence: "机制指标基于归一化后的 feature 强度计算。"
+    - from: "Lipidomics – derivation of CL/PG, MLCL/CL, oxCL/CL, ΣCL, ΣPG"
+      to: "Lipidomics – lipid mechanistic Z scores (per-batch axes)"
+      type: "required_for"
+      evidence: "实际脚本 05a_lipid_mechanistic_indicators_per_batch.R 与 06a_lipid_axis_effect_ho_vs_wt.R。"
+    - from: "Lipidomics – lipid mechanistic Z scores (per-batch axes)"
+      to: "Pipeline outputs – axis-level scores and CL indicators for integration"
+      type: "required_for"
+      evidence: "脂质轴 Z 将作为后续多组学整合的输入。"
+
+    # Targeted CL panel branch
+    - from: "Targeted CL panel (batch 4) – CL species measurements"
+      to: "CL panel – derived indices (total CL, oxidation index, composition metrics)"
+      type: "required_for"
+      evidence: "靶向 CL 原始浓度/峰面积用于计算总量与氧化指数。"
+    - from: "CL panel – derived indices (total CL, oxidation index, composition metrics)"
+      to: "CL panel – validation phenotypes / mechanistic indicators"
+      type: "required_for"
+      evidence: "CL 衍生指标被明确作为验证表型与机制 readouts。"
+    - from: "CL panel – validation phenotypes / mechanistic indicators"
+      to: "Pipeline outputs – axis-level scores and CL indicators for integration"
+      type: "required_for"
+      evidence: "CL panel 指标纳入后续多组学分析与机制图解读。"
+
+# ---------- 3. Evidence Mapping（每条流程与脚本/方法对应） ----------
+evidence_mapping:
+  supported_links:
+    - mechanism_step: "RNA-seq raw reads → QC & trimming → alignment & counts → DESeq2 modeling → gene-set Z"
+      supported_by: ["Methods_RNAseq_pipeline", "Supp_Fig_RNA_QC"]
+      confidence: "high"
+    - mechanism_step: "Untargeted lipidomics raw features → QC filtering & PQN → CL/PG, MLCL/CL, oxCL/CL, ΣCL, ΣPG → lipid mechanistic Z"
+      supported_by: ["Methods_Lipidomics_pipeline", "Supp_Fig_Lipid_QC"]
+      confidence: "high"
+    - mechanism_step: "Targeted CL panel → derived CL indices → validation phenotypes"
+      supported_by: ["Methods_CL_panel", "Main_Fig_CL"]
+      confidence: "high"
+  speculative_links:
+    - mechanism_step: "The same processing pipeline is directly applicable to other tissues and disease models without modification"
+      rationale: >
+        所采用的 QC、归一化和轴构建策略具有较强通用性，
+        理论上可迁移到其他细胞类型或疾病模型中，但尚未在本论文中系统验证。
+      boundary: >
+        不同组织/疾病的信噪比、脂质谱结构和批次结构可能不同，
+        实际应用时仍需重新评估 QC 阈值和轴定义。
+
+# ---------- 4. Graphical Logic（图要怎么讲故事） ----------
+visual_logic:
+  flow_direction: "left-to-right"
+  entry_point: "Three raw datasets: RNA-seq (3 batches), untargeted lipidomics (batches 1–3), targeted CL panel (batch 4)"
+  exit_point: "Structured outputs: RNA and lipid mechanistic axes plus CL validation indicators for multi-omics integration"
+  causal_chain:
+    - "从左侧的三条原始数据线开始：RNA-seq、非靶向脂质组、靶向 CL panel。"
+    - "每条线内部依次经过 QC、归一化/建模，逐步从 raw signal 走向结构化指标。"
+    - "RNA-seq 分支从 reads → QC → alignment → counts → DESeq2 → gene-level log2FC → gene-set Z。"
+    - "脂质组分支从 raw features → QC & dedup → PQN → 机制比值和总量 → 脂质机制轴 Z。"
+    - "CL panel 分支从 CL 物种 → 派生总量和氧化指数 → 作为验证表型/机制指标。"
+    - "最右侧节点汇总三条分支的输出，作为下一步多组学整合和机制分析的统一起点。"
+  parallel_paths:
+    - "RNA-seq pipeline：多批次测序数据的标准处理与机制基因集聚合。"
+    - "Untargeted lipidomics pipeline：多批次脂质信号的 QC、归一化和机制指标构建。"
+    - "Targeted CL panel pipeline：高精度 CL 测量及其衍生指标。"
+  feedback_loops:
+    - >
+      无实际计算上的反馈回路，本图强调的是从原始数据到机制指标的线性处理流程；
+      若需要，可在文字中补充“方法学选择可能反向影响结果解释”的讨论。
+
+# ---------- 5. Message Strength & Boundaries（力度与边界） ----------
+interpretation:
+  what_is_certain: >
+    （1）三条 pipeline 均已在本研究中实际实施，并在补充材料中提供了详细的脚本与 QC 图；
+    （2）每一步处理都有明确的统计/实验动机（如批次内 PQN、DESeq2 中显式建模 batch）；
+    （3）最终得到的 RNA 轴 Z、脂质轴 Z 和 CL 指标确实用于后续多组学整合与机制分析。
+  what_is_plausible: >
+    这一处理框架在其他多批次、多组学研究中同样适用，
+    尤其适合需要从复杂原始数据压缩出少量“机制轴”或“关键指标”的场景。
+  what_is_unknown: >
+    不同的归一化和 batch correction 方案（例如使用其他变换或模型），
+    是否会在定量上改变某些轴的效应大小或显著性；
+    这些方法学选择的敏感性在本研究中未进行系统比较。
+  why_model_needed: >
+    如果只在方法部分以文字罗列所有步骤，读者很难在脑中形成整体图景。
+    这张流程图把 RNA、脂质组和 CL panel 的处理步骤并行展开，
+    既展示了多批次、多组学的复杂性，又通过右端的统一输出强调“最终只保留少量机制性 readouts”，
+    有助于读者信任后续多组学结果的可靠性与可解释性。
+
+# ---------- 6. Transition（图在正文中的作用） ----------
+transition:
+  how_it_summarizes_previous: >
+    本图把前文分别描述的 RNA-seq、脂质组和 CL panel 方法整合在一张图中，
+    作为“数据准备与机制指标构建”部分的总结，
+    让读者在进入多组学整合与机制轴分析之前，对数据来源和处理路径有清晰印象。
+  how_it_leads_next_section: >
+    本图右侧的“Pipeline outputs” 节点自然引向下一节：
+    基于 RNA 轴 Z、脂质轴 Z 和 CL 指标的多组学整合、
+    上游通路分析和中介分析，从而过渡到 Figure 6 其它 panel 与 Discussion 中的整体机制模型。
+
+# ---------- 7. AI Writing Hints（写作提示，可选） ----------
+ai_hints:
+  target_section: ["Methods_overview", "Results_pipeline_summary"]
+  tone: "neutral"
+  language: "zh_en_mix"
+  target_journal_style: "Cell Metabolism"

@@ -16,9 +16,7 @@ mechanistic_axes:
       - name: sum_CL
         formula: "sum(CL)"
         description: "CL 总量，也用于 Supply 轴"
-      - name: CL_species_distribution
-        formula: "distribution(CL[72-76])"
-        description: "CL 的链长分布模式是否偏离正常值（链长偏差代表异常）"
+
 
   Remodeling:  # 重塑轴（MLCL ↔ CL）
     indicators:
@@ -28,7 +26,7 @@ mechanistic_axes:
       - name: sum_MLCL
         formula: "sum(MLCL)"
         description: "MLCL 累积（重塑不足的产物）"
-      - name: FA_remodeling_distance
+      - name: FA_remodeling_distance #暂时排除，因为没有脂肪酸链数据
         formula: "distance(CL_FA_pattern, normal_18_2_rich)"
         description: "CL 的脂酰组成偏离正常 18:2 富集模式的程度"
 
@@ -40,19 +38,19 @@ mechanistic_axes:
       - name: sum_oxCL
         formula: "sum(oxCL)"
         description: "氧化 CL 总量"
-      - name: CL_oxidation_depth
+      - name: CL_oxidation_depth #暂时排除，没有氧化数据
         formula: "proportion(multioxidized_CL)"
         description: "多氧化产物（+2O, +4O）比例，越高越严重"
 
   Transport:  # 膜转运与分布轴
     indicators:
-      - name: IMM_OMM_CL_asymmetry
+      - name: IMM_OMM_CL_asymmetry #无相关数据
         formula: "distance(CL_IMM, CL_OMM)"
         description: "CL 内外膜分布偏离程度"
-      - name: PG_IMM_OMM_asymmetry
+      - name: PG_IMM_OMM_asymmetry #无相关数据
         formula: "distance(PG_IMM, PG_OMM)"
         description: "PG 内外膜分布偏离程度"
-      - name: PG_PA_ratio
+      - name: PG_PA_ratio 
         formula: "sum(PG) / sum(PA)"
         description: "PA → PG 前体转运效率（也用于 supply 轴）"
 

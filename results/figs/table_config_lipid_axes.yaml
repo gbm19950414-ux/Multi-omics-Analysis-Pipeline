@@ -1,0 +1,23 @@
+table_id: "tab:lipid_axes"   # 现在只是标识用，主要用于将来你想记录
+caption: >
+  Mechanistic axes and lipidomic indicators used to define synthesis, supply,
+  remodeling and oxidation axes.
+
+input:
+  sheet: 1   # 读第几个 sheet
+
+style:
+  # 每一列的对齐方式（长度 >= 列数即可，多出来的会被截断）
+  # l = 左对齐; c = 居中; r = 右对齐
+  align: ["l", "c", "l", "l", "l", "c", "c", "c", "l"]
+
+  font_family: "Times New Roman"
+  font_size: 10
+
+  header:
+    bold: true
+    bg: NA   # 或者 "#DDDDDD" 做浅灰表头
+
+output:
+  docx:
+    file: "figure_6_b.docx"

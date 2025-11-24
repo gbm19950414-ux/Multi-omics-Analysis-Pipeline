@@ -1,0 +1,50 @@
+digraph panel_1c_pipeline {
+	fontname=Helvetica fontsize=10 rankdir=LR
+	subgraph cluster_rna {
+		color=lightgrey fontname=Helvetica label="RNA-seq (3 batches)" style=rounded
+		r1 [label=QC]
+		r2 [label=Alignment]
+		r3 [label="Count matrix"]
+		r4 [label="Normalization + Batch correction
+(DESeq2: ~ batch + group)"]
+		r5 [label="Gene-level log2FC"]
+		r6 [label="Mechanism gene-set Z"]
+		r1 -> r2
+		r2 -> r3
+		r3 -> r4
+		r4 -> r5
+		r5 -> r6
+	}
+	subgraph cluster_lipid {
+		color=lightgrey fontname=Helvetica label="Lipidomics (Batch1–3, untargeted)" style=rounded
+		l1 [label="QC & Normalization"]
+		l2 [label="Batch correction (ComBat)"]
+		l3 [label="ALR / CLR transform"]
+		l4 [label="Derive:
+CL/PG, MLCL/CL, oxCL/CL,
+ΣCL, ΣPG"]
+		l5 [label="Mechanism lipid Z"]
+		l1 -> l2
+		l2 -> l3
+		l3 -> l4
+		l4 -> l5
+	}
+	subgraph cluster_cl {
+		color=lightgrey fontname=Helvetica label="CL targeted panel (Batch4)" style=rounded
+		c1 [label="Targeted CL species"]
+		c2 [label="Derived indices:
+Total CL, Oxidation index"]
+		c3 [label="Validation phenotypes /
+Mechanistic indicators"]
+		c1 -> c2
+		c2 -> c3
+	}
+	meta [label="Meta-analysis / Multi-omics integration" color=lightblue fontname=Helvetica shape=diamond style=filled]
+	r6 -> meta
+	l5 -> meta
+	c3 -> meta
+	note [label="All analyses performed within
+each batch first, then combined
+using meta-analytic approaches." fontname=Helvetica fontsize=9 shape=note]
+	meta -> note [arrowhead=none style=dashed]
+}

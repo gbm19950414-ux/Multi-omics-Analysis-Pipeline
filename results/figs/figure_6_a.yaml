@@ -1,0 +1,125 @@
+# ============================================================
+# schema.yaml v2 — Model Panel (Conceptual / Mechanistic Diagram)
+# 用于没有数据、仅用于说明假设与机制的图（如 Figure 6A）
+# ============================================================
+
+meta:
+  panel_type: "model"       # 必填： "model"
+  figure: "6"                # 如 "Figure 6"
+  panel: "a"                 # 如 "A"
+  short_title: "EphB1-心磷脂代谢机制瓶颈概念图"           # 概念图一句话标题，如：“EphB1 regulates mitochondrial-ROS–CL–NLRP3 axis”
+  chapter: ""               # 属于哪一章
+  role_in_paper: "定义线粒体心磷脂代谢的五条机制轴（合成、重塑、转运、供给、氧化），作为后续 Ephb1 缺失多组学分析的“机制坐标系”和解释框架。"         # 这张概念图在整篇论文中的作用（非常重要）
+
+# ---------- 1. Conceptual Goal（这张图要解释什么？） ----------
+concept_goal:
+  core_message: >
+    这张概念图将心磷脂代谢拆分为四条功能轴，并为每条轴标注关键基因和脂质 readout，
+    说明后续多组学分析如何在该框架下量化 Ephb1 缺失对心磷脂代谢的影响。
+  problem_being_explained: >
+    如何把复杂的转录组与脂质组数据，整合到一套直观的“心磷脂合成–重塑–供给–氧化”机制模型中，
+    以便定量描述 Ephb1 缺失对各环节的方向性效应。
+
+# ---------- 2. Mechanistic Elements（机制组成部分） ----------
+mechanism:
+  key_nodes:
+    - name: "Mitochondrion"
+      description: "心磷脂（CL）合成、重塑和氧化的主要场所，是5条轴的中心背景结构。"
+    - name: "ER"
+      description: "提供磷脂酸（PA）和磷脂酰甘油（PG）的内质网库，作为 CL 合成的前体来源。"
+
+    - name: "CL"
+      description: "线粒体特异性磷脂，是5条轴的汇聚中心，也是重塑与氧化反应的起点。"
+
+    - name: "Synthesis axis"
+      description: "PA → CDP-DAG → PG → CL 的 de novo 合成通路。"
+    - name: "Remodeling axis"
+      description: "MLCL 与 CL 之间的往返重塑，调控 CL 的分子种类与功能。"
+    - name: "Transport axis"
+      description: "把 ER 端 PA/PG 实际送进线粒体内膜的过程。"
+    - name: "Supply axis"
+      description: "ER 端 PA/PG 的合成与可用性，决定“有多少前体可被使用”。"
+    - name: "Oxidation axis"
+      description: "CL 被 ROS 或脂氧合酶等催化氧化为 oxCL 的通路。"
+    - name: "Membrane context axis"
+      description: "反映线粒体内膜的整体磷脂负载（PC+PE+CL）和 CL 在其中的相对占比，以及这些指标如何通过生物发生、膜结构组织和 PC/PE 平衡来调节 CL 功能。"
+
+  key_edges:
+    - from: "ER Supply axis"
+      to: "CL"
+      type: "PA supply"
+      evidence: "概念上表示 ER 为 PA 前体池，后续轴通过 PRELID/TRIAP1 等转运蛋白调用该前体。"
+    - from: "Transport axis"
+      to: "CL"
+      type: "PA transport"
+      evidence: "PA成功转运到线粒体内膜"
+    - from: "Synthesis axis"
+      to: "CL"
+      type: "CL synthesis"
+      evidence: "从PA->CL的合成过程"
+
+    - from: "remodeling axis"
+      to: "CL"
+      type: "remodeling"
+      evidence: "MLCL ↔ CL，反映去酰/再酰化循环。"
+    - from: "oxidation axis"
+      to: "CL"
+      type: "oxidation"
+      evidence: "CL → oxCL (ROS)。"
+    -
+    - from: "membrane context axis"
+      to: "oxCL"
+      type: "availability"
+      evidence: "线粒体膜环境决定心磷脂是否能顺利发挥功能。"
+
+# ---------- 3. Evidence Mapping（每条机制对应论文证据） ----------
+evidence_mapping:
+  supported_links:          # 哪些机制步骤是“有数据支持”的？
+    - mechanism_step: ""    # 如 “EphB1 → mtROS（inhibition）”
+      supported_by: ["Fig3A", "Fig3B", "Fig4A"]
+      confidence: "high|medium|low"
+  speculative_links:        # 哪些步骤是推断（discussion中的）？
+    - mechanism_step: ""
+      rationale: ""         # 为何推断成立？
+      boundary: ""          # 有哪些不能确定的地方？
+
+# ---------- 4. Graphical Logic（图要怎么讲故事） ----------
+visual_logic:
+  flow_direction: "left-to-right"  # 选择一个故事流向
+  entry_point: "ER和线粒体框，提示心磷脂代谢发生在 ER–线粒体接口。"           # 从哪里开始讲（如 “EphB1 deletion”）
+  exit_point: "CL以及图下注解的 ‘directional Z score (mechanistic effect)’"            # 图最终指向什么（如 “↓ IL-1β release”）
+  causal_chain:             # 主因果链
+    - "ER Supply axis 提供 PA 前体"
+    - "Transport axis 将前体转运至线粒体"
+    - "Synthesis axis 将 PA 转化为 PG 再转化为 CL，决定 CL 总量"
+    - "Remodeling axis 在 MLCL ↔ CL 之间往返，优化 CL 组成与功能"
+    - "Oxidation axis 将 CL 氧化为 oxCL，连接线粒体损伤与下游炎症"
+    - "Membrane context axis 调节线粒体膜环境，影响 CL 功能发挥"
+  parallel_paths:           # 如果你的机制中有支路（如线粒体支路 + 细胞质支路）
+    - "合成、转运和供给轴共同决定 CL pool 的大小（ΣCL、CL/PG、ΣPG）。"
+    - "重塑、氧化和膜环境轴在既有 CL pool 上调节质量与功能发挥（MLCL/CL）与损伤状态（oxCL/CL）。"
+  feedback_loops:           # 若有反馈回路也可表达
+    - ""
+
+# ---------- 5. Message Strength & Boundaries（力度与边界） ----------
+interpretation:
+  what_is_certain: "心磷脂的生物合成、重塑、跨膜/跨细胞器转运以及氧化损伤涉及不同基因模块和脂质 readout；这些模块可以在概念上拆分为四条代谢/功能轴，并与转录组和脂质组指标一一对应。"       # 明确写出“本文章中有数据支持的部分”
+  what_is_plausible: "通过为每条轴构建加权的基因集和脂质 readout，并计算方向性 Z 分数，可以在轴层面上定量描述 Ephb1 缺失对心磷脂代谢网络的综合影响。"     # 逻辑推断但未直接测试的部分
+  what_is_unknown: "    各轴之间是否存在显著的功能耦联或补偿（例如合成轴受抑时重塑轴是否上调）仍未被系统性实验验证；
+    不同组织或刺激条件下，这四条轴的权重是否改变也有待后续研究。"       # 模型中仍未被实验解决的问题（常用于 Discussion）
+  why_model_needed: "     多组学数据维度高且分散，直接解读困难；
+    将 CL 代谢组织成四条机制轴，可以为后续的 Ephb1 依赖性变化提供清晰、可解释的坐标系，
+    也是整篇文章从“观测差异”上升到“机制层面整合”的关键一步。"      # 这张图为何有助于读者理解整章逻辑？
+
+# ---------- 6. Transition（图在正文中的作用） ----------
+transition:
+  how_it_summarizes_previous: "    在前几章中，我们分别从脂质组和转录组角度观察到 Ephb1 缺失影响 CL 含量。
+    本图将这个过程放到统一的 ER–线粒体 CL 代谢框架中。"   # 这张图如何总结前面所有实验？
+  how_it_leads_next_section: "    在此概念轴框架基础上，接下来的表格将提供所有该机制图中省略的关键基因与脂质读数。"    # 若之后有新章节，图如何作为桥？
+
+# ---------- 7. AI Writing Hints（写作提示，可选） ----------
+ai_hints:
+  target_section: ["Discussion_model", "Overall_mechanism"]
+  tone: "neutral"
+  language: "zh_en_mix"
+  target_journal_style: "Cell Metabolism"
