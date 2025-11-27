@@ -9,9 +9,10 @@ pathways:
     label: "AMPK energy sensing & catabolic switch"
     description: >
       AMPK 复合体及其典型下游靶基因，激活脂肪酸氧化、线粒体底物供给
-      和整体分解代谢程序。通路上调通常表示能量紧张、促进底物供给。
+      和整体分解代谢程序。这里刻意聚焦于在巨噬细胞/脂肪组织中普遍表达的
+      AMPK 核心亚基与 FAO 机器，避免依赖骨骼肌/肝脏特异性 readout。
     genes:
-      # AMPK 复合体核心亚基
+      # AMPK 复合体核心亚基（能量感应）
       - name: Prkaa1      # AMPK catalytic α1
         gene_effect_sign: 1
       - name: Prkaa2      # AMPK catalytic α2
@@ -21,15 +22,7 @@ pathways:
       - name: Prkag2      # AMPK regulatory γ2
         gene_effect_sign: 1
 
-      # 上游/协同代谢调控因子
-      - name: Ppargc1a    # PGC-1α，AMPK 经典协同因子
-        gene_effect_sign: 1
-      - name: Ppara       # PPARα，驱动脂肪酸氧化
-        gene_effect_sign: 1
-      - name: Ppard       # PPARδ
-        gene_effect_sign: 1
-
-      # 脂肪酸摄取与线粒体氧化相关
+      # 与 AMPK 协同的脂肪酸氧化机器（上线粒体底物供给）
       - name: Cpt1a       # Carnitine palmitoyltransferase 1A
         gene_effect_sign: 1
       - name: Acadl       # Long-chain acyl-CoA dehydrogenase
@@ -39,9 +32,7 @@ pathways:
       - name: Slc27a1     # Fatty acid transporter (FATP1)
         gene_effect_sign: 1
 
-      # 葡萄糖摄取 / 能量感应协同
-      - name: Slc2a4      # GLUT4
-        gene_effect_sign: 1
+      # 更普适的糖代谢 readout（替代 GLUT4 / G6PC 这类组织特异性标记）
       - name: Hk2         # Hexokinase 2
         gene_effect_sign: 1
 
@@ -49,8 +40,9 @@ pathways:
     axis: "Supply"
     label: "mTOR–SREBP-driven anabolic lipid synthesis"
     description: >
-      mTORC1 活性及其下游 SREBP1/2 靶基因，驱动去 novo 脂肪酸合成和
-      磷脂前体（如 PA、PC、PE）的供给，偏向合成/同化代谢。
+      mTORC1 活性及其下游 SREBP1/2 靶基因，驱动 de novo 脄肪酸合成和
+      磷脂前体（如 PA、PC、PE）的供给，偏向合成/同化代谢。以 mTOR 复合体
+      自身及核心脂质生成酶为主，避免把 4E-BP1 这类翻译抑制因子当作转录 readout。
     genes:
       # mTORC1 复合体与经典 readout
       - name: Mtor        # mTOR kinase
@@ -58,8 +50,6 @@ pathways:
       - name: Rptor       # Raptor, mTORC1 scaffold
         gene_effect_sign: 1
       - name: Rps6kb1     # S6K1, mTORC1 下游
-        gene_effect_sign: 1
-      - name: Eif4ebp1    # 4E-BP1, translation control
         gene_effect_sign: 1
 
       # SREBP 家族与 lipogenic 靶基因
@@ -74,10 +64,8 @@ pathways:
       - name: Dgat2       # Diacylglycerol acyltransferase 2
         gene_effect_sign: 1
 
-      # 碳流入 lipid synthesis 的调控
+      # 碳流入 lipid synthesis 的转录调控
       - name: Mlxipl      # ChREBP, carbohydrate-responsive TF
-        gene_effect_sign: 1
-      - name: G6pc        # Glucose-6-phosphatase (hepatic context)
         gene_effect_sign: 1
 
   Supply_PPAR_alpha_FAO:
@@ -102,8 +90,6 @@ pathways:
       - name: Acox1       # peroxisomal acyl-CoA oxidase
         gene_effect_sign: 1
       - name: Slc27a1
-        gene_effect_sign: 1
-      - name: Fabp1       # fatty acid binding protein
         gene_effect_sign: 1
 
   ## =========================================================

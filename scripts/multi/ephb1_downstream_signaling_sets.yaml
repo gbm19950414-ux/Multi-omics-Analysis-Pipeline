@@ -457,3 +457,4 @@ pathways:
         gene_effect_sign: 1
       - name: Ddit3      # CHOP
         gene_effect_sign: 1
+        

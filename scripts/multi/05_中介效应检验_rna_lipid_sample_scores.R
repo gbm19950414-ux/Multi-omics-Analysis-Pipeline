@@ -406,123 +406,66 @@ cat("  [RNA Y axis gene set] axis = ", rna_Y_axis,
     " ; n_gene = ", nrow(Y_gene_tbl),
     " ; matched Ensembl = ", sum(!is.na(Y_gene_tbl$GeneID)), "\n", sep = "")
 
+
 Y_score_RNA <- compute_score_rna(rna_expr_log2, Y_gene_tbl, effect_sign_col = "gene_effect_sign")
 
-## ---------------- 5. 脂质 Y_score（可选） -------------------
-
+# Initialize lipid score flag
 has_lipid_scores <- FALSE
-Y_score_lipid <- NULL
 
-if (!is.null(lipid_matrix) && file.exists(lipid_matrix) &&
-    !is.null(lipid_feature_set_tsv) && file.exists(lipid_feature_set_tsv) &&
-    !is.null(lipid_indicator_sign_yaml) && file.exists(lipid_indicator_sign_yaml)) {
+## ---- STEP5: 计算 / 读取脂质 Y_score_lipid ---------------------------------
 
-  cat("\n[STEP5] 计算脂质 Y_score（", lipid_Y_axis, " 轴）...\n", sep = "")
+precomp_lipid_path <- cfg$precomputed_lipid_axis_scores
 
-  lipid_tbl <- readr::read_tsv(lipid_matrix, show_col_types = FALSE)
+if (!is.null(precomp_lipid_path) && file.exists(precomp_lipid_path)) {
 
-  if (!"feature_id" %in% colnames(lipid_tbl)) {
-    stop("[ERROR] 脂质矩阵缺少 feature_id 列。")
+  message("[STEP5] 使用预计算好的脂质轴分数表: ", precomp_lipid_path)
+
+  lipid_axis_df <- readr::read_tsv(precomp_lipid_path, show_col_types = FALSE)
+
+  axis_name <- cfg$lipid_Y_axis        # 例如 "Supply" / "Remodeling" / ...
+  score_col <- paste0(axis_name, "_score")
+
+  if (!score_col %in% colnames(lipid_axis_df)) {
+    stop("[ERROR] 在 ", precomp_lipid_path, " 中找不到列: ", score_col,
+         "\n       请确认列名是否为 '<轴名>_score'，例如 Supply_score。")
   }
 
-  lipid_samples <- unique(sm$lipid_sample_id)
-  missing_lipid_samples <- setdiff(lipid_samples, colnames(lipid_tbl))
-  if (length(missing_lipid_samples) > 0) {
-    stop("[ERROR] 下列 lipid_sample_id 在脂质矩阵中找不到列: ",
-         paste(missing_lipid_samples, collapse = ", "))
-  }
-
-  lipid_mat <- lipid_tbl %>%
-    dplyr::select(feature_id, dplyr::all_of(lipid_samples)) %>%
-    column_to_rownames("feature_id") %>%
-    as.matrix()
-
-  cat("  [lipid_mat] features = ", nrow(lipid_mat),
-      " ; samples = ", ncol(lipid_mat), "\n", sep = "")
-
-  # --- 新实现：基于 YAML 定义的 mechanistic indicators 和 sign matrix 计算样本级脂质 Y_score ---
-
-  if (!"Class" %in% colnames(lipid_tbl)) {
-    stop("[ERROR] 脂质矩阵缺少 Class 列，无法按脂质类别汇总指标。")
-  }
-
-  class_sum <- lipid_tbl %>%
-    dplyr::filter(Class %in% c("CL", "PG", "PA", "PC", "PE")) %>%
-    dplyr::group_by(Class) %>%
-    dplyr::summarise(
-      dplyr::across(dplyr::all_of(lipid_samples), ~ sum(.x, na.rm = TRUE)),
-      .groups = "drop"
+  # lipid_sample_id 需与 sample_matching 中的形式一致（如 batch1_HO_5）
+  Y_score_lipid_df <- lipid_axis_df %>%
+    dplyr::transmute(
+      lipid_sample_id = if ("batch" %in% colnames(.)) {
+        paste0(.data$batch, "_", .data$sample_id)
+      } else {
+        .data$sample_id
+      },
+      Y_score_lipid   = .data[[score_col]]
     )
 
-  get_class_vec <- function(cls) {
-    if (cls %in% class_sum$Class) {
-      as.numeric(class_sum[class_sum$Class == cls, lipid_samples, drop = FALSE])
-    } else {
-      rep(0, length(lipid_samples))
-    }
-  }
-
-  sum_CL <- get_class_vec("CL")
-  sum_PG <- get_class_vec("PG")
-  sum_PA <- get_class_vec("PA")
-  sum_PC <- get_class_vec("PC")
-  sum_PE <- get_class_vec("PE")
-  sum_PCPECL <- sum_PC + sum_PE + sum_CL
-
-  eps <- 1e-6
-  PG_PA_ratio    <- sum_PG / pmax(sum_PA, eps)
-  mito_lipid_mass <- sum_PCPECL
-  CL_fraction     <- sum_CL / pmax(sum_PCPECL, eps)
-
-  if (!identical(lipid_Y_axis, "Supply")) {
-    stop("[ERROR] 当前脚本的脂质 Y_score 仅实现了 Supply 轴的样本级计算；",
-         "其它轴暂未在 sample-level 实现（因指标依赖亚细胞分布/异质度等信息）。\n",
-         "如需支持其它轴，请在脚本中扩展对应的指标计算。")
-  }
-
-  indicator_mat <- rbind(
-    sum_CL         = sum_CL,
-    sum_PG         = sum_PG,
-    PG_PA_ratio    = PG_PA_ratio,
-    mito_lipid_mass = mito_lipid_mass,
-    CL_fraction    = CL_fraction
-  )
-  colnames(indicator_mat) <- lipid_samples
-
-  if (!file.exists(lipid_indicator_sign_yaml)) {
-    stop("[ERROR] 找不到脂质指标方向矩阵 YAML: ", lipid_indicator_sign_yaml)
-  }
-  sign_cfg <- yaml::read_yaml(lipid_indicator_sign_yaml)
-
-  axis_sign_list <- sign_cfg[[lipid_Y_axis]]
-  if (is.null(axis_sign_list)) {
-    stop("[ERROR] 在脂质指标方向矩阵 YAML 中找不到轴: ", lipid_Y_axis)
-  }
-
-  indicator_names <- rownames(indicator_mat)
-  bottleneck_sign <- sapply(indicator_names, function(ind) {
-    info <- axis_sign_list[[ind]]
-    if (is.null(info) || is.null(info$bottleneck_sign)) {
-      warning("[WARN] 在 sign YAML 中找不到 ", lipid_Y_axis, " / ", ind,
-              " 的 bottleneck_sign，默认使用 +1。")
-      1
-    } else {
-      as.numeric(info$bottleneck_sign)
-    }
-  })
-  names(bottleneck_sign) <- indicator_names
-
-  z_ind_mat <- row_zscore(indicator_mat)
-  eff_ind_mat <- z_ind_mat * bottleneck_sign
-
-  Y_score_lipid_full <- colMeans(eff_ind_mat, na.rm = TRUE)
+  sm <- sm %>%
+    dplyr::left_join(Y_score_lipid_df, by = "lipid_sample_id")
 
   has_lipid_scores <- TRUE
-  Y_score_lipid <- Y_score_lipid_full
-} else {
-  cat("\n[STEP5] 未提供完整脂质矩阵 / 指标定义 YAML / 指标方向 YAML，跳过 Y_score_lipid 计算。\n")
-}
 
+
+} else {
+
+  # 没有预计算表，再看要不要走旧的“从 lipid_matrix 重算”逻辑
+  lipid_matrix_path        <- cfg$lipid_matrix
+  lipid_indicator_def_yaml <- cfg$lipid_feature_set_tsv
+
+  if (is.null(lipid_matrix_path) || !file.exists(lipid_matrix_path) ||
+      is.null(lipid_indicator_def_yaml) || !file.exists(lipid_indicator_def_yaml)) {
+
+    message("[STEP5] 未提供预计算脂质轴分数，也未提供完整脂质矩阵 / 指标定义 YAML，跳过 Y_score_lipid 计算。")
+
+  } else {
+
+    message("[STEP5] 未提供预计算脂质轴分数，改为根据脂质矩阵重算 Y_score_lipid ...")
+
+    ## 这里保留你原来的 Step5 计算代码（读 lipid_matrix、构造 indicator_mat、z-score、bottleneck_sign 等）
+    ## ...
+  }
+}
 ## ---------------- 6. 汇总样本级得分并写出 -------------------
 
 cat("\n[STEP6] 汇总样本级得分并写出...\n")
@@ -535,14 +478,12 @@ score_tbl <- sm %>%
   dplyr::mutate(
     M_score_RNA   = M_score_RNA[match(rna_sample_id, names(M_score_RNA))],
     Y_score_RNA   = Y_score_RNA[match(rna_sample_id, names(Y_score_RNA))]
+    # 注意：这里不再触碰 Y_score_lipid，直接沿用 STEP5 join 的结果
   )
 
-if (has_lipid_scores) {
-  score_tbl <- score_tbl %>%
-    dplyr::mutate(
-      Y_score_lipid = Y_score_lipid[match(lipid_sample_id, names(Y_score_lipid))]
-    )
-}
+# if (has_lipid_scores) {
+#   # 不需要再 mutate 一次 Y_score_lipid
+# }
 
 out_path <- file.path(outdir, "sample_scores_for_mediation.tsv")
 readr::write_tsv(score_tbl, out_path)

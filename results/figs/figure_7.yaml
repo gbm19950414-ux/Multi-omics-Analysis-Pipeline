@@ -65,7 +65,7 @@ panels:
       signatures，并可作为后续中介分析的可靠“上游驱动”。
 
   7D:
-    type: "mediation_analysis"
+    type: "mediation_analysis_1"
     question: >
       Ephb1 缺失对 cardiolipin 瓶颈脂质指标（CL_PG_ratio、
       oxCL_CL_ratio）的影响，有多少比例可由合成轴与氧化轴
@@ -85,7 +85,25 @@ panels:
       传递——合成轴解释了 CL_PG_ratio 改变的 40–65%，氧化轴解释了
       oxCL_CL_ratio 升高的 55–80% 间接效应，明确支持
       “Ephb1 → 下游模块 → 机制轴 → cardiolipin 瓶颈” 的机制链。
+    logs: >
+      首先要确保脂质轴分数（样本级别）被正确读取——完成
+      然后正确读取基因集分数（样本级别）——因为deseq2直接计算了log2FC，所以必须在这里重新读counts矩阵计算基因集分数——完成
+      确保上游rna基因集没有问题——完成优化
+      最后确保计算时候基因集与轴11对应
+  7F:
+    type: "mediation_analysis_2"
+    question: >
+        Ephb1 是否通过重塑这些‘供应/转运/膜结构’的转录调控程式，来驱动 CL 轴的变化？ 
+    data_source:
 
+    method: >
+
+    main_sentence: >
+
+    logs: >
+
+
+    
 notes:
   integration_summary: >
     Figure 7 将 Ephb1 信号转导与多组学机制轴整合为闭环：
