@@ -1,0 +1,160 @@
+# ============================================================
+# schema.yaml v2  ——  单个 panel 的结构化写作模版
+# 目标：让 AI 在几乎不需要补充信息的前提下，生成：
+#   - 结果段（Results）
+#   - 简短讨论/过渡段（Mini Discussion / Transition）
+#   - Methods 中本实验的“差异性信息”
+# ============================================================
+
+# ---------- 0. Meta & Assets：基本信息 ----------
+meta:
+  figure: "6"              # 如 "Figure 3"
+  panel: "A"               # 如 "A"
+  short_title: "机制轴效应与 CL 表型的跨批次关联分析"         # 1 句以内，本 panel 做了什么（如："EphB1 缺失抑制 NLRP3 介导的 IL-1β 释放"）
+  chapter: "Mitochondrial lipid remodeling"             # 属于哪一章/小节，如 "3.2 Mitochondrial damage during pyroptosis"
+  experiment_id: "multiomics_axis_CL_link"       # 选填，用于和你的实验记录/脚本对应，如 "2025-03-21_NLRP3_IL1b_ELISA"
+  version: 1              # 整数，用来追踪修改
+
+assets:
+  main_figure_file: "results/figs/figure_6_f.png"    # 主图文件路径，如 "figures/F3/F3A_IL1b_ELISA.pdf"
+  raw_data_files:         # 原始数据/整理后数据的文件路径列表
+    - "results/multiomics/mechanistic_axis_effects_matrix.tsv"
+  stats_files:            # 统计分析结果文件（R/Python 脚本输出）
+    - "results/figs/figure_6_f_all_stats.tsv"
+  analysis_scripts:       # 用于生成图/做统计的脚本
+    - "scripts/plot/figure_6_f.R"
+  supplementary_items:    # 对应的补充图/表（若有）
+    - "Figure S6F_full"
+
+# ---------- 1. Scientific Question：本节要回答什么 ----------
+question:
+  context_from_previous: "上一节识别了 HO 与 WT 在线粒体脂质生成、氧化与膜环境方面的主要机制轴差异。"  # 与上一节的衔接（1 句）：上一节发现/提出了什么问题？
+                             # 例如：“前一节结果提示 EphB1 缺失可能限制 NLRP3 炎性小体的完全激活。”
+  core_question: "这些机制轴的综合效应是否能预测跨批次的关键 CL 表型变化？"          # 本 panel 的核心科学问题（1 句，用“是否”、“如何”、“在多大程度上”等）
+                             # 例如：“本节检验 EphB1 缺失是否降低 NLRP3 激活后 IL-1β 的分泌水平。”
+  hypothesis_or_expectation: "若轴 Z 分数真实反映脂质代谢瓶颈，则 CL panel 的 HO–WT 差值应与轴效应呈一致趋势。"  # 你的假设或预期结果（1 句）
+                             # 例如：“如果 EphB1 促进 NLRP3 炎性小体的效应端活性，则 EphB1 缺失应降低 IL-1β 的释放。”
+  importance_reason: "建立机制轴与真实脂质读数之间的联系，是验证多组学整合分析可靠性的关键步骤。"      # 为什么这个问题重要/值得单列一节（1 句即可）
+                             # 例如：“IL-1β 是 NLRP3 炎性小体的关键功能 readout，用于评估效应端活性。”
+
+# ---------- 2. Rationale / Design Logic：为什么这样设计 ----------
+rationale:
+  model_and_system: "以批次为单位，将每个 axis 的 combined Z 分数与 CL panel 中的 HO–WT 脂质差值配对。"       # 使用的模型/系统 + 选择理由
+                             # 例如：“选用原代腹腔巨噬细胞，因为其对 NLRP3 激活高度敏感，且能反映体内炎症状态。”
+  key_variables: "自变量：combined Z（HO–WT）；因变量：CL 相关脂质指标 HO–WT 差值。"          # 本实验关注的关键变量 + 操纵方式
+                             # 例如：“操纵基因型（WT vs Ephb1−/−）和刺激条件（LPS 预处理 + ATP/Nigericin 激活）。”
+  control_logic: "跨批次差值可减少实验噪声，并凸显 HO 特异性的方向性变化。"          # 对照设置背后的逻辑（为什么这些对照足以回答问题）
+                             # 例如：“未刺激组用于定义基线 IL-1β 水平，WT 作为 Ephb1−/− 的参照组。”
+  core_justification: "若某轴主导 HO 的 CL 重塑，则不同批次中该轴的 Z 分数应与 CL 表型一致变化。"     # 最关键的一句“设计理由”（可直接当自动摘要用）
+                             # 例如：“如果 EphB1 促进炎性小体效应端活性，则 Ephb1−/− 细胞在相同刺激下应释放更少 IL-1β。”
+
+# ---------- 3. Methods（差异性信息）：只写本 panel 特有的 ----------
+methods:
+  inherits_from_protocol: "default_multiomics_CL_pipeline"   # 引用全章或整篇论文的通用 protocol 名称，如 "default_peritoneal_macrophage_NLRP3_activation"
+                               # 之后可在 Methods 总节详细描述该 protocol。
+  biological_material: "原代腹腔巨噬细胞（C57BL/6 WT 与 HO 基因敲除小鼠）。"      # 使用的生物材料/模型：动物/原代/细胞系 + 关键信息
+                               # 例如：“8–12 周龄雄性 C57BL/6 WT 与 Ephb1−/− 小鼠来源的原代腹腔巨噬细胞。”
+  experimental_groups: "每个批次均包含 WT 与 HO，并计算 HO–WT 差值。"      # 组别及核心差异：基因型、处理、时间点
+                               # 例如：“按基因型分为 WT 和 Ephb1−/−，均接受 LPS 预处理 + ATP 激活。”
+  stimuli_and_treatment: "无特异性刺激"    # 刺激/药物/处理的关键信息（种类 + 浓度 + 时间）
+                               # 例如：“LPS 100 ng/mL 预处理 4 h，随后 ATP 5 mM 处理 30 min。”
+  time_points: "无特殊时间点"              # 关键测定时间点（如果不在上面已写清）
+  dose_info: "无剂量"                # 若有剂量梯度，在此简要说明（如 “Alexidine 0, 1, 5, 10 μM”）
+  readout_and_assay: "LC-MS 测得 CL panel 指标；multi-omics 整合获得 mechanistic axis Z 分数。"        # 读出方式（ELISA/WB/IF/plate reader）及关键差异信息
+                               # 例如：“使用 IL-1β ELISA 测定上清中 IL-1β，按厂商说明书操作。”
+  replicates: "共 3–4 个独立批次（每批含 WT 与 HO），每批次视为一个数据点。"               # 生物学重复数 n，以及是否合并多次实验
+                               # 例如：“每组 n = 4 生物学重复，结果合并自两次独立实验。”
+  analysis_notes: "对每个 axis × phenotype 做线性回归，记录 r、p 与斜率方向；无对数转换。"           # 本 panel 特有的分析方法/统计模型（如 normalization、配对 vs 非配对）
+                               # 例如：“采用非配对双尾 t 检验；ELISA 结果按蛋白浓度归一化。”
+  minimal_methods_summary: "以批次为单位，将 HO–WT 的 CL 表型差值与机制轴 Z 分数进行回归分析。"  # 1–2 句，把上面内容压缩成将来写 Methods 时可以直接用的一小段。
+
+# ---------- 4. Results：把图变成结构化文字 ----------
+results:
+  data_direction: >
+    以批次为单位，将每条机制轴的 combined Z（HO−WT）与预先挑选的 CL panel 指标 HO−WT 差值做回归。
+    Membrane context 轴中，CL_fraction 在 batch1 略低于 WT（diff_HO_WT = −0.00166），在 batch2 与 batch3 略高于 WT（分别为 +0.00007 和 +0.00018），batch4 差值为 0，
+    四个批次整体与轴效应呈较强负相关（r = −0.928，n = 4）。同一轴下的 mito_lipid_mass 在所有批次均低于 WT（diff_HO_WT 分别为 −5.75×10⁹、−6.38×10¹⁰、−4.06×10¹⁰、−2.32×10⁸），
+    随 Membrane context 轴 Z 分数升高呈中等强度正相关（r = 0.702，n = 4）。
+    Oxidation 轴中，oxCL_CL_ratio 在四个批次中均为 0（HO 与 WT 均未检测到氧化 CL），因此回归的相关系数与 p 值不可定义（r = NA，p = NA，n = 4）。
+    Remodeling 轴中，MLCL_CL_ratio 在 batch2 和 batch4 略高于 WT（diff_HO_WT = +0.119 和 +0.00088），在 batch3 略低于 WT（−0.018），batch1 为 0，
+    跨批次整体呈轻度负相关（r = −0.482，n = 4）。
+    Supply 轴中，sum_PA 在 batch1 与 batch2 略低于 WT（−3.40×10⁶ 和 −1.48×10⁷），在 batch3 明显高于 WT（+1.59×10⁸），batch4 为 0，
+    跨批次整体相关性较弱且方向不稳定（r = −0.333，n = 4）。
+    Synthesis 轴中，CL_PG_ratio 在 batch1 略低于 WT（−0.0114），在 batch2 与 batch3 略高于 WT（+0.00286 和 +0.00538），batch4 因数值为 Inf 无法纳入分析，
+    3 个有效批次之间呈轻度负相关（r = −0.434，n = 3）。
+    Transport 轴中，PA_CL_mismatch 在 batch1 与 batch3 为正值（+1.34 和 +0.50），在 batch2 为负值（−1.19），
+    PA_PG_mismatch 在 batch1 与 batch3 为明显正值（+1.62 和 +1.16），batch2 接近 0（−0.083），
+    两个 mismatch 指标与 Transport 轴 Z 分数在 3 个批次内均呈较强正相关（PA_CL_mismatch r = 0.862，PA_PG_mismatch r = 0.894，n = 3）。
+  stats_summary: >
+    对每一条轴 × 表型组合进行线性回归，Membrane context/CL_fraction 的斜率为 −1.01×10⁻³（r = −0.928，p = 0.072，n = 4），
+    Membrane context/mito_lipid_mass 的斜率为 2.63×10¹⁰（r = 0.702，p = 0.298，n = 4）。
+    Oxidation/oxCL_CL_ratio 因四个批次 diff_HO_WT 全为 0，斜率与相关系数均为 NA。
+    Remodeling/MLCL_CL_ratio 的斜率为 −9.63×10⁻²（r = −0.482，p = 0.518，n = 4）。
+    Supply/sum_PA 的斜率为 −4.22×10⁷（r = −0.333，p = 0.667，n = 4）。
+    Synthesis/CL_PG_ratio 的斜率为 −8.25×10⁻³（r = −0.434，p = 0.714，n = 3）。
+    Transport/PA_CL_mismatch 与 Transport/PA_PG_mismatch 的斜率分别为 0.653 和 0.461，
+    对应相关系数 r = 0.862（p = 0.339，n = 3）与 r = 0.894（p = 0.296，n = 3）。
+  key_numbers: >
+    Membrane context/CL_fraction: n = 4，slope = −1.01×10⁻³，r = −0.928，p = 0.0715；
+    Membrane context/mito_lipid_mass: n = 4，slope = 2.63×10¹⁰，r = 0.702，p = 0.2977。
+    Oxidation/oxCL_CL_ratio: n = 4，diff_HO_WT 全为 0，r = NA，p = NA。
+    Remodeling/MLCL_CL_ratio: n = 4，slope = −9.63×10⁻²，r = −0.482，p = 0.5177。
+    Supply/sum_PA: n = 4，slope = −4.22×10⁷，r = −0.333，p = 0.6665。
+    Synthesis/CL_PG_ratio: 有效 n = 3（batch4 为 Inf 被排除），slope = −8.25×10⁻³，r = −0.434，p = 0.7144。
+    Transport/PA_CL_mismatch: n = 3，slope = 0.653，r = 0.862，p = 0.3387；
+    Transport/PA_PG_mismatch: n = 3，slope = 0.461，r = 0.894，p = 0.2957。
+  group_difference_statement: >
+    总体而言，Membrane context 轴的 CL_fraction 在一个批次中明显低于 WT 而在其他批次接近 0 差异，
+    mito_lipid_mass 在所有批次中均低于 WT；Remodeling 轴下的 MLCL_CL_ratio 在不同批次间围绕 0 轻微波动；
+    Supply 轴的 sum_PA 在前三个批次间跨越负到正的较大区间；
+    Synthesis 轴的 CL_PG_ratio 在少数批次中略有上升或下降；
+    Transport 轴的 mismatch 指标在多个批次中对 HO 显著偏正（diff_HO_WT > 0），提示 HO 相对 WT 的 PA 与 CL/PG 匹配程度整体更差。
+  robustness_and_qc: >
+    每个轴 × 表型组合的批次数有限（多数为 n = 4，Transport 相关指标为 n = 3），
+    且部分指标（如 CL_PG_ratio 的 batch4、oxCL_CL_ratio 全部批次）存在 Inf 或全 0 值，
+    导致某些组合的 r 与 p 无法可靠估计或被迫排除。
+    回归分析未发现明显的极端离群点，但由于样本量小，斜率与相关系数的置信度有限。
+  anomalies_or_limits: >
+    Oxidation/oxCL_CL_ratio 的 HO−WT 差值在所有批次均为 0，提示在当前实验条件下几乎未检测到可量化的氧化 CL，
+    该轴的“氧化表型”主要由其他指标承担。
+    Synthesis/CL_PG_ratio 在 batch4 中出现 Inf，反映该批次底物极低或数值异常，导致该点无法纳入回归。
+    Transport mismatch 指标虽然在 3 个批次中显示出较高的相关系数（r 接近 0.9），但由于 n 较小且 p 值>0.29，
+    这些趋势应被视为探索性而非严格显著。
+
+# ---------- 5. Interpretation & Role in Chapter：怎么理解 + 在整章中的作用 ----------
+interpretation:
+  minimal_bio_interpretation: >
+    在本图中，纵轴直接使用脂质组学指标的真实 HO−WT 差值，因此每一个点都可以按生物学方向来解读：
+    CL_PG_ratio、sum_PA、CL_fraction 与 mito_lipid_mass 的上升代表 CL 合成与底物供应/线粒体容量更“通畅”，
+    而 MLCL_CL_ratio、PA_CL_mismatch 与 PA_PG_mismatch 的上升则代表重塑或转运瓶颈加重。
+    结合这一意义，结果表明：跨批次的机制轴 Z 分数虽总体相关性有限，但在 Transport 轴上，较高的轴效应稳定对应更高的 PA_CL_mismatch / PA_PG_mismatch（即 PA 相对 CL/PG 的失配加重），
+    与“转运瓶颈加重”的预期方向一致；Membrane context 轴在 HO 中总体表现为 CL_fraction 略为降低而 mito_lipid_mass 全面下降，
+    提示该轴更多捕捉到“膜环境受损/容量下降”而不是单纯 CL 占比上升。
+  alternative_explanations: >
+    首先，批次数较少（大多为 n = 3–4）且不同批次的 HO−WT 差值幅度有限，可能掩盖了真实的轴–表型耦合关系；
+    其次，当前 CL panel 仅覆盖有限的分子种类，对氧化 CL（oxCL）几乎未检测到定量信号，导致 Oxidation 轴难以在脂质层面得到直接验证；
+    此外，mechanistic axis Z 分数本身整合了转录组与脂质组信息，其中 RNA 维度的贡献可能在部分轴上占主导，从而削弱了与单一脂质 readout 的线性相关性。
+  summary_type: "exploratory,supportive,negative"
+  claim_supported: >
+    以真实 HO−WT 差值为纵轴时，多组学机制轴与其设计对应的 CL 表型在方向上大多不矛盾，
+    尤其是 Transport 轴与 PA mismatch 指标之间呈现出方向一致的趋势，
+    但除个别组合外，当前数据不足以将机制轴视为“精确预测器”，而更适合作为描述不同类型 CL 瓶颈的整合维度。
+  link_to_previous: >
+    在前一节中，我们基于多组学数据识别出合成、重塑、转运等多个在 HO 中受扰的 CL 机制轴；
+    本节通过将这些轴与生理上可解释的 CL panel 指标（如 CL_PG_ratio、MLCL_CL_ratio 和 PA mismatch）一一配对，
+    显示轴分数与相应脂质表型在方向上基本自洽，从而为前述“主贡献轴”的生物学含义提供定性支持。
+  transition_to_next: >
+    接下来，我们将不再逐一考察单一 readout，而是综合各条机制轴及其代表性 CL 表型，
+    构建 EphB1 缺失条件下心磷脂合成、重塑与转运失衡的整体调控模型，并与功能 readout（如 NLRP3 激活和 IL-1β 释放）进行对照。
+# ---------- 6. AI Writing Hints（可选）：给 LLM 的写作风格提示 ----------
+ai_hints:
+  target_section: ["Results", "Discussion_mini", "Methods_diff"] 
+    # 你希望从这个 schema 主要生成哪些部分的正文？
+    # 可选值： "Results" / "Discussion_mini" / "Methods_diff"
+  tone: "neutral"     
+    # 写作语气： "neutral"（默认科研语气）/ "cautious"（更谨慎）/ "confident"（偏肯定）
+  target_journal_style: "" 
+    # 若有心仪期刊的写作风格，可以在此填入名称，仅作为“风格参考”
+    # 例如："Cell Metabolism", "Nature Immunology"
+  language: "zh_en_mix"
+    # 你希望生成何种语言： "zh"（中文）/ "en"（英文）/ "zh_en_mix"（中英混排方便你润色）

@@ -33,6 +33,7 @@ suppressPackageStartupMessages({
   library(tidyr)
   library(stringr)
   library(purrr)
+  library(rlang)
 })
 
 ## --------- 0. 解析命令行参数 & 配置 -------------------------
@@ -71,9 +72,6 @@ plots_dir  <- cfg$plots_dir  %||% plots_dir_default
 indicator_cfg_path <- cfg$lipid_mechanistic_indicator_config %||%
   "scripts/lipid/lipid_mechanistic_indicators.yaml"
 
-sign_matrix_path   <- cfg$lipid_indicator_sign_matrix %||%
-  "scripts/lipid/lipid_indicator_sign_matrix.yaml"
-
 ## 输入文件路径（本脚本只用 PQN，不用 PQN+bb）
 long_pqn_path <- file.path(tables_dir, "lipid_long_dedup_pqn.tsv")
 sample_info_path <- file.path(tables_dir, "sample_info_lipid.tsv")
@@ -90,7 +88,6 @@ cat("============================================================\n")
 cat("[INFO] 10_lipid_mechanistic_indicators_per_batch.R\n")
 cat("  input long : ", long_pqn_path, "\n", sep = "")
 cat("  input sample_info: ", sample_info_path, "\n", sep = "")
-cat("  sign matrix : ", sign_matrix_path, "\n", sep = "")
 cat("  output per-sample  : ", out_per_sample_path, "\n", sep = "")
 cat("  output per-batch×group×axis: ", out_per_batch_group_path, "\n", sep = "")
 cat("============================================================\n\n")
@@ -103,10 +100,6 @@ if (!file.exists(long_pqn_path)) {
 
 if (!file.exists(sample_info_path)) {
   stop("[ERROR] 找不到 sample_info_lipid.tsv: ", sample_info_path)
-}
-
-if (!file.exists(sign_matrix_path)) {
-  stop("[ERROR] 找不到 sign matrix 配置文件: ", sign_matrix_path)
 }
 
 cat("[STEP1] 读取 PQN 后长表 & sample_info ...\n")
@@ -164,31 +157,53 @@ long_bio <- long_anno %>%
 cat("  [INFO] 生物学样本记录数（过滤 group 非 NA 之后）: ",
     nrow(long_bio), "\n", sep = "")
 
-## --------- 2. 读取 sign matrix（方向性信息） -----------------
+## --------- 2. 读取脂质机制指标配置（mechanistic_axes） ----------
 
-cat("\n[STEP2] 读取 directionality sign matrix ...\n")
+cat("\n[STEP2] 读取脂质机制指标配置 (mechanistic_axes) ...\n")
 
-sign_cfg <- yaml::read_yaml(sign_matrix_path)
+if (!file.exists(indicator_cfg_path)) {
+  stop("[ERROR] 找不到脂质机制指标配置文件: ", indicator_cfg_path)
+}
 
-## sign_cfg 的结构：
-##   Axis:
-##     indicator_name:
-##       bottleneck_sign: +1/-1
-## 需要把它展开为 data.frame: axis, indicator, bottleneck_sign
+indicator_cfg <- yaml::read_yaml(indicator_cfg_path)
 
-sign_df <- purrr::imap_dfr(sign_cfg, function(axis_list, axis_name) {
-  purrr::imap_dfr(axis_list, function(ind_cfg, ind_name) {
+axes_list <- indicator_cfg$mechanistic_axes
+if (is.null(axes_list) || length(axes_list) == 0) {
+  stop("[ERROR] 配置文件中未找到 mechanistic_axes 字段或为空。")
+}
+
+## 展开为一张 metadata 表：axis, axis_weight, indicator, formula, bottleneck_sign, indicator_weight
+indicator_df <- purrr::imap_dfr(axes_list, function(axis_def, axis_name) {
+  axis_weight <- axis_def$axis_weight
+  if (is.null(axis_weight) || is.na(axis_weight)) {
+    axis_weight <- 1
+  }
+  inds <- axis_def$indicators
+  if (is.null(inds) || length(inds) == 0) {
+    return(tibble::tibble(
+      axis            = character(0),
+      axis_weight     = numeric(0),
+      indicator       = character(0),
+      formula         = character(0),
+      bottleneck_sign = numeric(0),
+      indicator_weight = numeric(0)
+    ))
+  }
+  purrr::map_dfr(inds, function(ind) {
     tibble::tibble(
-      axis = axis_name,
-      indicator = ind_name,
-      bottleneck_sign = as.numeric(ind_cfg$bottleneck_sign)
+      axis            = axis_name,
+      axis_weight     = as.numeric(axis_weight),
+      indicator       = ind$name,
+      formula         = ind$formula,
+      bottleneck_sign = as.numeric(ind$bottleneck_sign),
+      indicator_weight = as.numeric(ifelse(is.null(ind$weight) || is.na(ind$weight), 1, ind$weight))
     )
   })
 })
 
-cat("  [sign_df] 行数 = ", nrow(sign_df),
-    " ; 涉及 axis 数 = ", length(unique(sign_df$axis)),
-    " ; 指标数 = ", length(unique(sign_df$indicator)), "\n", sep = "")
+cat("  [indicator_df] 行数 = ", nrow(indicator_df),
+    " ; 涉及 axis 数 = ", length(unique(indicator_df$axis)),
+    " ; 指标数 = ", length(unique(indicator_df$indicator)), "\n", sep = "")
 
 ## --------- 3. 按 Class 统计 ΣCL/ΣPG/ΣMLCL/...（per sample） ----
 
@@ -252,40 +267,142 @@ for (nm in c("CL", "PG", "MLCL", "oxCL", "PA", "PC", "PE")) {
   class_totals <- safe_add_col(class_totals, nm)
 }
 
-## --------- 4. 计算脂质机制指标（raw 指标） -------------------
+## --------- 3b. 在 batch 内为各类脂质计算 z-score（用于 z() 语法） -----
 
-cat("\n[STEP4] 计算脂质机制指标（raw 指标）...\n")
+cat("\n[STEP3b] 在 batch 内为 CL, PG, MLCL, oxCL, PA, PC, PE 计算 z-score ...\n")
 
-indicators_df <- class_totals %>%
+class_totals <- class_totals %>%
+  group_by(batch) %>%
   mutate(
-    ## 合成轴
-    CL_PG_ratio = dplyr::if_else(PG > 0, CL / PG, NA_real_),
-    sum_CL      = CL,
-    sum_PG      = PG,
+    z_CL = {
+      m <- mean(CL, na.rm = TRUE)
+      s <- sd(CL, na.rm = TRUE)
+      if (is.finite(s) && s > 0) {
+        (CL - m) / s
+      } else {
+        rep(NA_real_, dplyr::n())
+      }
+    },
+    z_PG = {
+      m <- mean(PG, na.rm = TRUE)
+      s <- sd(PG, na.rm = TRUE)
+      if (is.finite(s) && s > 0) {
+        (PG - m) / s
+      } else {
+        rep(NA_real_, dplyr::n())
+      }
+    },
+    z_MLCL = {
+      m <- mean(MLCL, na.rm = TRUE)
+      s <- sd(MLCL, na.rm = TRUE)
+      if (is.finite(s) && s > 0) {
+        (MLCL - m) / s
+      } else {
+        rep(NA_real_, dplyr::n())
+      }
+    },
+    z_oxCL = {
+      m <- mean(oxCL, na.rm = TRUE)
+      s <- sd(oxCL, na.rm = TRUE)
+      if (is.finite(s) && s > 0) {
+        (oxCL - m) / s
+      } else {
+        rep(NA_real_, dplyr::n())
+      }
+    },
+    z_PA = {
+      m <- mean(PA, na.rm = TRUE)
+      s <- sd(PA, na.rm = TRUE)
+      if (is.finite(s) && s > 0) {
+        (PA - m) / s
+      } else {
+        rep(NA_real_, dplyr::n())
+      }
+    },
+    z_PC = {
+      m <- mean(PC, na.rm = TRUE)
+      s <- sd(PC, na.rm = TRUE)
+      if (is.finite(s) && s > 0) {
+        (PC - m) / s
+      } else {
+        rep(NA_real_, dplyr::n())
+      }
+    },
+    z_PE = {
+      m <- mean(PE, na.rm = TRUE)
+      s <- sd(PE, na.rm = TRUE)
+      if (is.finite(s) && s > 0) {
+        (PE - m) / s
+      } else {
+        rep(NA_real_, dplyr::n())
+      }
+    }
+  ) %>%
+  ungroup()
 
-    ## 重塑轴
-    MLCL_CL_ratio = dplyr::if_else(CL > 0, MLCL / CL, NA_real_),
-    sum_MLCL      = MLCL,
+## --------- 4. 计算脂质机制指标（raw 指标，基于配置公式） -------
 
-    ## 氧化轴
-    oxCL_CL_ratio = dplyr::if_else(CL > 0, oxCL / CL, NA_real_),
-    sum_oxCL      = oxCL,
+cat("\n[STEP4] 计算脂质机制指标（raw 指标，基于配置公式）...\n")
 
-    ## 转运 / 供给轴
-    PG_PA_ratio = dplyr::if_else(PA > 0, PG / PA, NA_real_),
+indicators_df <- class_totals
 
-    mito_lipid_mass = PC + PE + CL,
-    CL_fraction     = dplyr::if_else(
-      (PC + PE + CL) > 0,
-      CL / (PC + PE + CL),
-      NA_real_
+## 准备每个指标的唯一公式（如有重复指标名，取第一条）
+indicator_formulas <- indicator_df %>%
+  dplyr::distinct(indicator, formula) %>%
+  dplyr::mutate(
+    ## 将 formula 中的 z(X) 语法替换为 z_X，使用 STEP3b 预先计算的 z-score 列
+    formula_eval = stringr::str_replace_all(
+      formula,
+      "z\\(([A-Za-z0-9_]+)\\)",
+      "z_\\1"
     )
   )
 
-## 当前脚本实现的指标名（可以与 sign_matrix.yaml 对应）
+## 辅助函数：对整张表按行逐行计算一个公式，返回数值向量
+eval_indicator_column <- function(df, formula_string) {
+  expr <- rlang::parse_expr(formula_string)
+  purrr::map_dbl(seq_len(nrow(df)), function(i) {
+    rlang::eval_tidy(expr, data = df[i, , drop = FALSE])
+  })
+}
+
+failed_formulas <- character(0)
+
+for (i in seq_len(nrow(indicator_formulas))) {
+  ind_name <- indicator_formulas$indicator[i]
+  form_raw <- indicator_formulas$formula[i]
+  form_str <- indicator_formulas$formula_eval[i]
+
+  if (ind_name %in% colnames(indicators_df)) {
+    next
+  }
+
+  cat("  [INFO] 计算指标: ", ind_name, " = ", form_raw, " ...\n", sep = "")
+  val <- tryCatch(
+    eval_indicator_column(class_totals, form_str),
+    error = function(e) {
+      failed_formulas <<- c(
+        failed_formulas,
+        paste0(ind_name, " (", form_raw, "): ", conditionMessage(e))
+      )
+      rep(NA_real_, nrow(class_totals))
+    }
+  )
+  indicators_df[[ind_name]] <- val
+}
+
+if (length(failed_formulas) > 0) {
+  cat("  [WARN] 以下指标公式计算失败，将填充 NA，请检查配置:\n")
+  for (msg in failed_formulas) {
+    cat("    - ", msg, "\n", sep = "")
+  }
+}
+
+## 当前脚本实现的指标名（可以与配置文件中的 indicator 名对应）
+base_cols <- c("batch", "sample_id", "group", "CL", "PG", "MLCL", "oxCL", "PA", "PC", "PE")
 available_indicators <- setdiff(
   colnames(indicators_df),
-  c("batch", "sample_id", "group")
+  base_cols
 )
 
 cat("  [INFO] 当前可计算的指标列:\n    ",
@@ -295,14 +412,13 @@ cat("  [INFO] 当前可计算的指标列:\n    ",
 
 cat("\n[STEP5] 在每个 batch 内进行 z-score & 瓶颈方向校正...\n")
 
-## sign matrix 中出现的指标
-sign_indicators <- unique(sign_df$indicator)
+sign_indicators <- unique(indicator_df$indicator)
 
-## 取交集：既在 sign matrix 中又在实际数据中存在的指标
+## 取交集：既在配置中又在实际数据中存在的指标
 use_indicators <- intersect(sign_indicators, available_indicators)
 
 if (length(use_indicators) == 0) {
-  stop("[ERROR] sign matrix 中的指标在当前数据中都不存在，请检查命名是否一致。")
+  stop("[ERROR] 配置中的指标在当前数据中都不存在，请检查命名是否一致。")
 }
 
 cat("  [INFO] 将用于瓶颈评分的指标:\n    ",
@@ -319,7 +435,7 @@ ind_long <- indicators_df %>%
 
 ## 合并 sign 信息
 ind_long_sign <- ind_long %>%
-  left_join(sign_df, by = "indicator")
+  left_join(indicator_df, by = c("indicator" = "indicator"))
 
 ## 在 batch 内对每个 indicator 做 z-score
 ind_long_z <- ind_long_sign %>%
@@ -335,7 +451,11 @@ ind_long_z <- ind_long_sign %>%
   ) %>%
   ungroup() %>%
   mutate(
-    signed_z = z_raw * bottleneck_sign
+    bottleneck_sign   = dplyr::if_else(is.na(bottleneck_sign), 1, bottleneck_sign),
+    indicator_weight  = dplyr::if_else(is.na(indicator_weight), 1, indicator_weight),
+    axis_weight       = dplyr::if_else(is.na(axis_weight), 1, axis_weight),
+    signed_z          = z_raw * bottleneck_sign,
+    weighted_signed_z = signed_z * indicator_weight
   )
 
 ## --------- 6. 聚合到机制轴（axis-level bottleneck score） -------
@@ -345,10 +465,16 @@ cat("\n[STEP6] 计算每个机制轴（axis）的瓶颈分数 ...\n")
 axis_scores <- ind_long_z %>%
   group_by(batch, sample_id, group, axis) %>%
   summarise(
-    n_indicators = sum(!is.na(signed_z)),
-    axis_score   = dplyr::if_else(
+    n_indicators          = sum(!is.na(weighted_signed_z)),
+    axis_weight           = dplyr::first(axis_weight),
+    axis_score_unweighted = dplyr::if_else(
       n_indicators > 0,
       mean(signed_z, na.rm = TRUE),
+      NA_real_
+    ),
+    axis_score            = dplyr::if_else(
+      n_indicators > 0,
+      axis_weight * mean(weighted_signed_z, na.rm = TRUE),
       NA_real_
     ),
     .groups = "drop"

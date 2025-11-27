@@ -1,0 +1,421 @@
+# ============================================================
+# figure_7_b.yaml —— EphB1 下游信号模块表（用于论文自动写作）
+# ============================================================
+
+# ---------- 0. Meta & Assets：基本信息 ----------
+meta:
+  figure: "Figure 7"
+  panel: "7B-table"
+  panel_type: "table"
+  short_title: "EphB1 下游信号模块与心磷脂机制轴汇总"
+  chapter: "第三章 EphB1 依赖的信号通路介导心磷脂瓶颈"
+  experiment_id: "ephb1_downstream_signaling_v1"
+  version: 3
+
+assets:
+  main_table_file: "results/figs/figure_7_b_ephb1_downstream_signaling_table.tsv"
+  raw_data_files:
+    - "scripts/multi/ephb1_downstream_signaling_sets.yaml"
+    - "results/rna/deseq2/interaction/interaction_summary_with_perBatchLFC.tsv"
+  stats_files:
+    - "results/multiomics/tables/ephb1_downstream_signaling_scores_per_batch.tsv"
+  analysis_scripts:
+    - "scripts/multi/ephb1_downstream_signaling_sets.yaml"
+    - "scripts/plot/figure_7_b.R"
+  supplementary_items:
+    - "Table S7-1"
+
+# ---------- 1. Scientific Question：本表服务的科学问题 ----------
+scientific_question:
+  context_from_previous: >
+    前一节在转录组与脂质组层面分别描绘了 EphB1 缺失后多条线粒体相关通路的变化，
+    并在 Figure 7A 中给出了 EphB1–CL 轴的整体概念模型。
+  core_question: >
+    本表旨在系统归纳 EphB1 缺失背景下被定义为“下游信号模块”的基因集，
+    以及这些模块在心磷脂各机制轴（合成、供给、氧化、运输、膜环境）中的预期作用。
+  importance_reason: >
+    通过以表格形式明确列出每个模块的名称、功能定位、目标 CL 机制轴及基因构成，
+    有助于读者理解后续中介分析与机制图中各信号模块的来源与生物学含义，
+    也便于评审追溯模块定义过程的合理性和可重复性。
+
+# ---------- 2. Rationale / Design Logic：为什么要这样设计这张表 ----------
+rationale:
+  why_table_instead_of_figure: >
+    该部分信息以离散的信号模块与基因列表为主，需要精确的文本与表头说明，
+    直接以图形呈现易造成信息拥挤，采用表格更适合系统化展示与引用。
+  design_logic: >
+    每一行代表一个 EphB1 下游信号模块（gene set），列依次给出模块 ID、
+    中文名称、在 EphB1 信号网络中的定位、预期作用的心磷脂机制轴、
+    模块基因数以及带有 gene_effect_sign 的基因列表。模块功能的文字描述
+    通过 key_message 与 notes_for_writing 记录，用于自动生成正文。
+  inclusion_criteria: >
+    仅纳入在文献和通路注释中有明确生物学定义、且可在本课题转录组数据中
+    通过基因表达与 EphB1 状态建立联系的信号模块；每个模块需由多个核心
+    基因组成，并在原始 YAML 中给出明确基因列表与 gene_effect_sign。
+  exclusion_criteria: >
+    未纳入仅含少数零散基因、缺乏清晰通路框架的候选集合；未纳入仅在单批次
+    或单一组学中偶然显著、缺乏生物学一致性的基因列表；未单独拆分高度重叠、
+    难以在机制层面区分的子通路，以避免表格过度碎片化。
+  core_justification: >
+    本表通过将文献驱动的 EphB1 下游信号通路整理为有限数目的功能模块，
+    为后续“EphB1→信号模块→心磷脂机制轴”的中介分析与机制整合提供
+    结构化、可复用的模块定义。
+
+# ---------- 3. Table Structure：列结构与整体用途 ----------
+table_structure:
+  table_title: >
+    Table 7-B. EphB1 下游信号模块及其与心磷脂机制轴的对应关系。
+  table_goal: >
+    帮助读者在一处查看本研究中采用的所有 EphB1 下游信号模块，
+    包括其生物学命名、在 EphB1 信号网络中的定位、预期作用的
+    心磷脂机制轴以及模块基因构成，为理解 Figure 7A–7D 中的
+    概念模型和中介分析结果提供清晰的“模块字典”。
+  level_in_text: "main_result"
+  related_figures:
+    - "Figure 7A"
+    - "Figure 7B"
+    - "Figure 7C"
+    - "Figure 7D"
+
+  column_definitions:
+    - key: "pathway_id"
+      label: "Pathway ID"
+      description: "模块唯一标识符（对应原始 YAML 中的 pathway 名称，用于脚本与其他结果文件索引）。"
+      unit: ""
+      value_type: "string"
+      allowed_values: []
+      example_value: "EphB1_AMPK_energy_sensing"
+
+    - key: "module_label"
+      label: "模块名称"
+      description: "该信号模块的生物学名称（中英文混用），用于表格首列展示和正文引用。"
+      unit: ""
+      value_type: "string"
+      allowed_values: []
+      example_value: "AMPK–TSC 能量感知模块"
+
+    - key: "axis"
+      label: "所属大轴"
+      description: "该模块在 EphB1 整体信号网络中的大类归属，本表中均为 EphB1_signaling。"
+      unit: ""
+      value_type: "string"
+      allowed_values:
+        - "EphB1_signaling"
+      example_value: "EphB1_signaling"
+
+    - key: "target_axes"
+      label: "目标 CL 机制轴"
+      description: >
+        该信号模块在机制推理中预期主要作用的心磷脂调控维度，可包括
+        Synthesis、Supply、Oxidation、Transport、Membrane context 等，
+        以分号分隔。
+      unit: ""
+      value_type: "string"
+      allowed_values:
+        - "Synthesis"
+        - "Supply"
+        - "Oxidation"
+        - "Transport"
+        - "Membrane context"
+      example_value: "Supply; Oxidation"
+
+    - key: "n_genes"
+      label: "基因数"
+      description: "模块中包含的基因数量，用于反映模块规模与冗余度。"
+      unit: "genes"
+      value_type: "numeric"
+      allowed_values: []
+      example_value: "10"
+
+    - key: "genes_with_sign"
+      label: "基因列表（含 gene_effect_sign）"
+      description: >
+        模块内所有基因及其 gene_effect_sign 标记，1 表示表达上调有利于
+        该模块活化，-1 表示表达上调对应模块抑制，便于后续计算模块得分时
+        统一方向。
+      unit: ""
+      value_type: "string"
+      allowed_values: []
+      example_value: "Prkaa1 (1), Prkaa2 (1), Tsc1 (1), Tsc2 (1), …"
+
+# ---------- 4. Entries：每一行代表一个最小“feature”实体 ----------
+entries:
+  - row_id: "EphB1_AMPK_energy_sensing"
+    display_label: "AMPK–TSC 能量感知模块"
+    category: "EphB1_signaling_module"
+    priority: "primary"
+    key_message: >
+      AMPK–TSC 能量感知模块将 EphB1 信号与细胞能量状态、脂质氧化和
+      线粒体生物发生联系起来，是解释 EphB1 缺失影响心磷脂供给与氧化
+      敏感性的关键调节点。
+    values:
+      pathway_id: "EphB1_AMPK_energy_sensing"
+      module_label: "AMPK–TSC energy-sensing module"
+      axis: "EphB1_signaling"
+      target_axes: "Supply; Oxidation"
+      n_genes: 10
+      genes_with_sign: "Prkaa1 (1), Prkaa2 (1), Prkab1 (1), Prkab2 (1), Prkag1 (1), Tsc1 (1), Tsc2 (1), Sirt1 (1), Ppargc1a (1), Ppargc1b (1)"
+    evidence_note: >
+      模块基于 AMPK 及 TSC 复合体的经典能量感知功能构建，
+      本课题中在多批次 RNA-seq 中可见其多个成员随 EphB1 状态
+      与心磷脂供给/氧化指标呈协同变化，用作中介分析的候选中枢。
+    link_to_figures:
+      - "Figure 7A"
+      - "Figure 7B"
+      - "Figure 7C"
+    notes_for_writing: >
+      在 Results 中强调：EphB1 缺失伴随 AMPK–TSC 模块整体激活/抑制，
+      与心磷脂供给/氧化轴的改变方向一致；在 Discussion 中可讨论
+      “能量感知–线粒体脂质供给”这一桥梁机制。
+
+  - row_id: "EphB1_PI3K_AKT_mTOR"
+    display_label: "PI3K–AKT–mTOR 生长/代谢信号模块"
+    category: "EphB1_signaling_module"
+    priority: "primary"
+    key_message: >
+      PI3K–AKT–mTOR 模块代表 EphB1 对细胞生长与代谢的经典调控通路，
+      是连接 EphB1 状态与脂质前体池（PG/PA）供给变化的重要上游信号。
+    values:
+      pathway_id: "EphB1_PI3K_AKT_mTOR"
+      module_label: "PI3K–AKT–mTOR signaling downstream of EphB1"
+      axis: "EphB1_signaling"
+      target_axes: "Synthesis; Supply"
+      n_genes: 19
+      genes_with_sign: "Pik3ca (1), Pik3cb (1), Pik3cd (1), Pik3r1 (1), Pik3r2 (1), Akt1 (1), Akt2 (1), Akt3 (1), Mtor (1), Rptor (1), Rictor (1), Mlst8 (1), Prkaa1 (-1), Prkaa2 (-1), Tsc1 (-1), Tsc2 (-1), Rps6kb1 (1), Rps6kb2 (1), Eif4ebp1 (1)"
+    evidence_note: >
+      该模块以 PI3K 催化/调节亚基、AKT 家族和 mTORC1/2 关键组分为核心，
+      gene_effect_sign 结合 AMPK/TSC 对 mTOR 的负调控方向设置；
+      在转录组中，该模块得分与 CL_PG_ratio、sum_PA 等合成/供给轴指标
+      的方向性高度一致。
+    link_to_figures:
+      - "Figure 7A"
+      - "Figure 7B"
+      - "Figure 7C"
+    notes_for_writing: >
+      可在正文中写作：“PI3K–AKT–mTOR 模块作为生长与代谢的经典通路，
+      在 EphB1 缺失背景下表现出与心磷脂合成/供给轴一致的方向性变化，
+      提示 CL 瓶颈部分源于上游生长信号的重编程。”
+
+  - row_id: "EphB1_PGC1_NRF_mito_biogenesis"
+    display_label: "PGC-1 / NRF / ERR 线粒体生物发生模块"
+    category: "EphB1_signaling_module"
+    priority: "primary"
+    key_message: >
+      PGC-1/NRF/ERR 模块集中反映线粒体生物发生与呼吸链重塑，
+      为连接 EphB1 信号与线粒体容量、心磷脂合成与膜环境轴提供核心转录枢纽。
+    values:
+      pathway_id: "EphB1_PGC1_NRF_mito_biogenesis"
+      module_label: "PGC-1 / NRF / ERR axis (mitochondrial biogenesis)"
+      axis: "EphB1_signaling"
+      target_axes: "Supply; Synthesis; Membrane context"
+      n_genes: 13
+      genes_with_sign: "Ppargc1a (1), Ppargc1b (1), Nrf1 (1), Nfe2l2 (1), Esrra (1), Esrrg (1), Creb1 (1), Tfam (1), Tfb1m (1), Tfb2m (1), Ndufa9 (1), Cox4i1 (1), Atp5f1a (1)"
+    evidence_note: >
+      基因集来源于线粒体生物发生经典文献与 KEGG/Reactome 注释，
+      在本课题的 RNA-seq 中显示与线粒体质量指标和 CL_PG_ratio 的
+      变化方向吻合，适合作为“线粒体供给/合成背景”的转录读数。
+    link_to_figures:
+      - "Figure 7A"
+      - "Figure 7B"
+      - "Figure 7D"
+    notes_for_writing: >
+      建议用语：“PGC-1/NRF 线粒体生物发生模块在 EphB1 缺失后整体下调，
+      与心磷脂合成轴受限及线粒体容量下降相一致”，突出其作为
+      “结构背景/容量背景”的角色。
+
+  - row_id: "EphB1_cytoskeleton_FAQ_Src_Rho"
+    display_label: "EphB1–FAK/Src–Rho GTPases 细胞骨架/黏附模块"
+    category: "EphB1_signaling_module"
+    priority: "primary"
+    key_message: >
+      EphB1–FAK/Src–Rho 模块反映受体信号与黏附、细胞骨架重排的直接耦联，
+      为心磷脂富集膜区、线粒体定位和膜接触点提供物理与空间基础。
+    values:
+      pathway_id: "EphB1_cytoskeleton_FAQ_Src_Rho"
+      module_label: "EphB1–FAK/Src–Rho GTPases (cytoskeleton & adhesion)"
+      axis: "EphB1_signaling"
+      target_axes: "Membrane context; Transport"
+      n_genes: 16
+      genes_with_sign: "Ephb1 (1), Efnb1 (1), Efnb2 (1), Ptk2 (1), Src (1), Yes1 (1), Lyn (1), Rhoa (1), Rac1 (1), Cdc42 (1), Vav2 (1), Vav3 (1), Arhgef1 (1), Arhgef12 (1), Arhgap5 (1), Arhgap35 (1)"
+    evidence_note: >
+      模块基于 EphB1–FAK/Src–Rho 经典通路构建，主要用于解释
+      膜环境与线粒体空间组织层面的改变；虽然其转录变化幅度
+      相对代谢模块较小，但在机制图中提供必要的“结构框架”。
+    link_to_figures:
+      - "Figure 7A"
+      - "Figure 7B"
+    notes_for_writing: >
+      可强调“membrane context”概念：EphB1 下游骨架/黏附信号为
+      心磷脂富集内膜与接触位点提供空间前提，而不仅仅是简单的
+      上下调基因集。
+
+  - row_id: "EphB1_integrin_caveolae_membrane_microdomain"
+    display_label: "Integrin–FA 复合体及膜微域空间信号模块"
+    category: "EphB1_signaling_module"
+    priority: "primary"
+    key_message: >
+      Integrin–FA complex 与 caveolae/microdomain 模块描述 EphB1 信号
+      在膜微域与黏附结构中的空间组织，为 CL 富集内膜和线粒体–质膜
+      接触的膜环境轴提供结构与信号双重支撑。
+    values:
+      pathway_id: "EphB1_integrin_caveolae_membrane_microdomain"
+      module_label: "Integrin–FA complex & membrane microdomains (EphB1 spatial signaling)"
+      axis: "EphB1_signaling"
+      target_axes: "Membrane context; Transport"
+      n_genes: 12
+      genes_with_sign: "Itgb1 (1), Itgb3 (1), Itga5 (1), Pxn (1), Tln1 (1), Tln2 (1), Vcl (1), Fermt2 (1), Cav1 (1), Cav2 (1), Flot1 (1), Flot2 (1)"
+    evidence_note: >
+      该模块以整合素受体、黏着斑复合体及 caveolin/flotillin 为核心，
+      主要作为“空间节点”出现在机制图中，用于强调 EphB1 信号的
+      膜微域定位及其对 CL 富集区域和线粒体–膜接触点的潜在影响。
+    link_to_figures:
+      - "Figure 7A"
+      - "Figure 7B"
+    notes_for_writing: >
+      建议语言中突出“spatial signaling / membrane microdomain”，
+      强调这是一个结构–信号耦联模块，而非单纯的整合素通路列表。
+
+  - row_id: "EphB1_MAPK_ERK_p38_JNK"
+    display_label: "MAPK 级联（ERK / p38 / JNK）模块"
+    category: "EphB1_signaling_module"
+    priority: "primary"
+    key_message: >
+      MAPK（ERK/p38/JNK）模块整合了细胞增殖、生存与应激反应信号，
+      是 EphB1 缺失影响炎症应答与线粒体应激、进而调节心磷脂重塑
+      与氧化的重要通路。
+    values:
+      pathway_id: "EphB1_MAPK_ERK_p38_JNK"
+      module_label: "MAPK cascades (ERK / p38 / JNK) downstream of EphB1"
+      axis: "EphB1_signaling"
+      target_axes: "Remodeling; Oxidation"
+      n_genes: 20
+      genes_with_sign: "Hras (1), Kras (1), Nras (1), Braf (1), Raf1 (1), Map2k1 (1), Map2k2 (1), Mapk1 (1), Mapk3 (1), Mapk14 (1), Mapk11 (1), Mapk12 (1), Mapk8 (1), Mapk9 (1), Mapk10 (1), Elk1 (1), Fos (1), Jun (1), Jund (1), Atf2 (1)"
+    evidence_note: >
+      模块涵盖 Ras→Raf→MEK→ERK 经典级联及 p38/JNK 支路，
+      在本课题的转录组中与炎症及线粒体应激特征基因呈协同变化，
+      适合用于解释 CL 重塑与氧化轴中的应激成分。
+    link_to_figures:
+      - "Figure 7A"
+      - "Figure 7B"
+      - "Figure 7D"
+    notes_for_writing: >
+      可写成：“MAPK 模块作为炎症/应激信号枢纽，提供了 EphB1 缺失
+      影响 CL 重塑与氧化轴的应激路径”，同时避免将其与 NF-κB 模块
+      完全等同。
+
+  - row_id: "EphB1_JAK_STAT_inflammatory"
+    display_label: "JAK–STAT 炎症信号模块"
+    category: "EphB1_signaling_module"
+    priority: "primary"
+    key_message: >
+      JAK–STAT 模块反映炎症细胞因子与干扰素样信号的转录响应，
+      为 EphB1 缺失后炎症微环境改变与 CL 氧化/膜环境改变之间
+      提供一条细胞因子驱动的连接线。
+    values:
+      pathway_id: "EphB1_JAK_STAT_inflammatory"
+      module_label: "JAK–STAT module (inflammation & cytokine signaling)"
+      axis: "EphB1_signaling"
+      target_axes: "Oxidation; Membrane context"
+      n_genes: 16
+      genes_with_sign: "Jak1 (1), Jak2 (1), Jak3 (1), Tyk2 (1), Stat1 (1), Stat2 (1), Stat3 (1), Stat5a (1), Stat5b (1), Stat6 (1), Ifit1 (1), Ifit3 (1), Isg15 (1), Irf7 (1), Socs1 (-1), Socs3 (-1)"
+    evidence_note: >
+      该模块由 JAK 家族激酶、STAT 转录因子及部分 IFN/炎症靶基因组成，
+      在 EphB1 缺失条件下与 NF-κB 模块协同上调，提示炎症细胞因子
+      信号在放大 CL 氧化及膜环境紊乱中的作用。
+    link_to_figures:
+      - "Figure 7A"
+      - "Figure 7B"
+      - "Figure 7D"
+    notes_for_writing: >
+      正文中可强调“JAK–STAT as a cytokine-driven arm of EphB1 downstream
+      signaling”，与 NF-κB 模块相互印证，突出炎症–mtROS–CL 氧化轴。
+
+  - row_id: "EphB1_NFkB_inflammation_ROS"
+    display_label: "NF-κB 炎症 / ROS 模块"
+    category: "EphB1_signaling_module"
+    priority: "primary"
+    key_message: >
+      NF-κB 模块是炎症和 ROS 应激的核心枢纽，连接 EphB1 信号、
+      促炎细胞因子表达与线粒体氧化损伤，为解释 CL 氧化轴增强
+      和 inflammasome 激活提供关键转录证据。
+    values:
+      pathway_id: "EphB1_NFkB_inflammation_ROS"
+      module_label: "NF-κB signaling (inflammation & ROS)"
+      axis: "EphB1_signaling"
+      target_axes: "Oxidation; Membrane context"
+      n_genes: 15
+      genes_with_sign: "Rela (1), Relb (1), Nfkb1 (1), Nfkb2 (1), Nfkbia (-1), Nfkbib (-1), Nfkbie (-1), Chuk (1), Ikbkb (1), Ikbkg (1), Tnf (1), Il1b (1), Il6 (1), Ccl2 (1), Cxcl10 (1)"
+    evidence_note: >
+      在多批次 RNA-seq 中，NF-κB 核心亚基及其炎症靶基因在 EphB1 缺失
+      背景下持续上调，与 oxCL_CL_ratio 升高和 IL-1β 释放下降/补偿
+      的脂质组学与功能实验结果相呼应，支持 NF-κB 作为 CL 氧化轴
+      的主要上游之一。
+    link_to_figures:
+      - "Figure 7A"
+      - "Figure 7B"
+      - "Figure 7D"
+    notes_for_writing: >
+      建议在 Results 中用“NF-κB-centered inflammatory/ROS module”描述，
+      在 Discussion 中可讨论其与 mtROS–CL oxidation–inflammasome 之间的
+      反馈环路。
+
+  - row_id: "EphB1_mito_stress_cell_death"
+    display_label: "线粒体应激与细胞死亡模块（凋亡/焦亡）"
+    category: "EphB1_signaling_module"
+    priority: "primary"
+    key_message: >
+      线粒体应激与细胞死亡模块聚焦于 Bax/Bak 介导的凋亡、RIPK–MLKL
+      介导的坏死性凋亡以及 NLRP3–Caspase–GSDMD 焦亡通路，是连接 EphB1
+      缺失、心磷脂氧化、mtROS 上升与 IL-1β 释放改变的重要中介节点。
+    values:
+      pathway_id: "EphB1_mito_stress_cell_death"
+      module_label: "Mitochondrial stress & cell death module (apoptosis / pyroptosis)"
+      axis: "EphB1_signaling"
+      target_axes: "Oxidation; Membrane context"
+      n_genes: 17
+      genes_with_sign: "Bcl2 (-1), Bcl2l1 (-1), Bax (1), Bak1 (1), Bnip3 (1), Bnip3l (1), Tnfrsf1a (1), Ripk1 (1), Ripk3 (1), Mlkl (1), Nlrp3 (1), Pycard (1), Casp1 (1), Gsdmd (1), Hif1a (1), Atf4 (1), Ddit3 (1)"
+    evidence_note: >
+      该模块整合了多条线粒体相关细胞死亡通路，基于文献及通路数据库
+      进行 gene_effect_sign 标记；在本研究的数据中，该模块得分与 oxCL_CL_ratio
+      及 mtROS 指标高度相关，并与 GSDMD 介导的 pyroptosis 功能实验
+      方向一致。
+    link_to_figures:
+      - "Figure 7A"
+      - "Figure 7B"
+      - "Figure 7D"
+    notes_for_writing: >
+      在正文中可以写作：“EphB1 缺失伴随以 Bax/Bak–RIPK–NLRP3 为核心的
+      线粒体应激/细胞死亡模块整体激活，为 CL 氧化升高与 inflammasome
+      激活之间提供了机制纽带”。
+
+# ---------- 5. Summary for Writing：整张表的“写作摘要” ----------
+summary_for_writing:
+  main_take_home_message: >
+    本表将文献与功能注释中零散的 EphB1 下游信号通路汇总为九个功能清晰的模块，
+    并明确了它们在心磷脂合成、供给、氧化、运输与膜环境轴中的预期作用，
+    为后续“EphB1→信号模块→CL 瓶颈”的中介分析提供了结构化框架。
+  pattern_summary: >
+    整体上，代谢与能量相关模块（PI3K–AKT–mTOR、AMPK–TSC、PGC-1/NRF）
+    主要指向供给/合成轴，而炎症与应激模块（NF-κB、JAK–STAT、MAPK、
+    线粒体应激/细胞死亡）则更多指向氧化与膜环境轴；骨架/黏附与膜微域模块
+    提供空间与结构背景，构成 EphB1 信号调控 CL 瓶颈的“形–能–炎”三重维度。
+  anomalies_or_limits: >
+    部分模块（尤其是空间组织相关模块）在转录层面的变化幅度有限，
+    更偏向概念和文献驱动的“结构性节点”；此外，模块之间在基因层面存在
+    一定重叠（如 Ppargc1a 同时出现在 AMPK 与生物发生模块中），需要在
+    解释时强调其“在不同模块语境下承担不同功能”的特点。
+  link_to_previous: >
+    在前一节中我们分别描述了 RNaseq 与脂质组学中 EphB1 缺失对多条线粒体
+    相关通路和 CL 指标的影响；本表则将这些散点式观测整合为有限数目的
+    EphB1 下游信号模块，作为后续机制分析与中介模型的“组件库”。
+  transition_to_next: >
+    基于本表中定义的九个 EphB1 下游信号模块，我们在随后的分析中分别计算了
+    各模块的转录组模块得分，并与心磷脂各机制轴的脂质组学指标进行中介分析，
+    以定量评估哪些信号模块在 EphB1–CL 瓶颈之间承担了最主要的中介作用。
+
+# ---------- 6. AI Writing Hints：写作风格与输出偏好 ----------
+ai_hints:
+  target_section: ["Results", "Discussion_mini", "Methods_diff"]
+  tone: "neutral"
+  target_journal_style: "Cell Metabolism"
+  language: "zh_en_mix"

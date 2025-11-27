@@ -1,0 +1,95 @@
+# ============================================================
+# Figure 7C — EphB1 downstream signaling pathways (RNA-based meta Z)
+# ============================================================
+
+meta:
+  figure: "Figure 7"
+  panel: "C"
+  short_title: "EphB1 下游信号通路活性（跨批次 meta Z + 分批 Z）"
+  chapter: "4.2 Downstream signaling axes linked to EphB1"
+  experiment_id: "2025-04-04_RNA_EphB1_downstream_signaling_metaZ"
+  version: 1
+
+assets:
+  main_figure_file: "results/figs/figure_7_c.pdf"
+  raw_data_files:
+    - "results/rna/ephb1_downstream_scores_per_batch.tsv"
+    - "results/rna/ephb1_downstream_scores_meta.tsv"
+  stats_files:
+    - "results/rna/ephb1_downstream_scores_meta.tsv"
+  analysis_scripts:
+    - "scripts/multi/04_EphB1下游通路活性评估_rna_ephb1_downstream_scores.R"
+    - "scripts/plot/figure_7_c.R"
+  supplementary_items: []
+
+# ---------- 1. Scientific Question ----------
+question:
+  context_from_previous: "上一节通过多组学结果提示 EphB1 缺失可能重塑线粒体状态并影响炎症相关信号轴。"
+  core_question: "EphB1 缺失是否在转录水平抑制特定下游信号通路的活性，并且这些通路在不同实验批次中是否一致？"
+  hypothesis_or_expectation: "如果 EphB1 调控多个应激与炎症通路，则其缺失应表现为多条下游轴的系统性抑制。"
+  importance_reason: "明确 EphB1 下游信号网络的整体方向性可定义其在细胞炎症与代谢调控中的核心作用。"
+
+# ---------- 2. Rationale / Design Logic ----------
+rationale:
+  model_and_system: "使用 3 批次原代腹腔巨噬细胞的 bulk RNA-seq 数据，以增强跨实验条件的稳健性。"
+  key_variables: "比较 WT 与 Ephb1−/− 的 pathway-level Z 分数，并采用 Stouffer 方法整合各批次结果。"
+  control_logic: "每批次内部均进行 WT vs KO 的差异分析，meta Z 用于排除批次效应，使结论更稳健。"
+  core_justification: "若某下游通路确由 EphB1 正向调控，则 KO 组应在多个批次中呈现一致的负向 Z 径向并在 meta Z 中得到放大。"
+
+# ---------- 3. Methods（本 panel 特有差异性信息） ----------
+methods:
+  inherits_from_protocol: "default_bulkRNAseq_DEG_pipeline_v2"
+  biological_material: "来自 8–12 周龄雄性 C57BL/6 WT 与 Ephb1−/− 小鼠的原代腹腔巨噬细胞，共 3 个独立实验批次。"
+  experimental_groups: "每批次均包含 WT 和 Ephb1−/−（HO）两组。"
+  stimuli_and_treatment: "本节使用基础状态（未刺激）RNA-seq 数据，用于评估 EphB1 的“静息态下游通路构型”。"
+  time_points: "采样于细胞贴壁后 16–20 h。"
+  dose_info: ""
+  readout_and_assay: "RNA-seq（Illumina PE150），对 pathway 分数使用单基因 z-score 加权平均得到 z_pathway。"
+  replicates: "每批次 WT/KO 各 n = 3–4，总计 20 份样品。"
+  analysis_notes: "使用 Stouffer 方法计算跨批次 meta Z；绘制 pathway meta Z 条形图与 per-batch 热图。"
+  minimal_methods_summary: >
+    本 panel 基于三批次 WT 与 Ephb1−/− 原代巨噬细胞 RNA-seq 数据，
+    按 pathway 基因集计算 z_pathway，并使用 Stouffer 方法整合为 meta Z，
+    以评估 EphB1 缺失对下游信号模块的整体转录活性影响。
+
+# ---------- 4. Results ----------
+results:
+  data_direction: >
+    大部分与炎症、应激及细胞骨架相关的路径在 KO 组呈系统性负向变化，
+    meta Z 显示 NFκB/ROS、JAK-STAT、integrin/caveolae 等路径显著下调；
+    AMPK 能量感知、细胞骨架-Src/Rho、PGC1-NRF 线粒体生物发生轴表现为轻度上调。
+  stats_summary: "跨批次 Stouffer meta Z（两侧），NFκB_inflammation_ROS 为最显著负向通路（Z ≈ -1.6）。"
+  key_numbers: >
+    NFκB_inflammation_ROS: meta Z ≈ -1.6；
+    JAK_STAT_inflammatory: meta Z ≈ -0.5；
+    AMPK_energy_sensing: meta Z ≈ +0.4；
+    其他通路 meta Z 介于 -0.3 至 +0.3。
+  group_difference_statement: >
+    与 WT 相比，Ephb1−/− 巨噬细胞在多条促炎与膜域信号通路上呈一致性下调，
+    而代谢-能量感知相关通路则显示轻度增强。
+  robustness_and_qc: >
+    绝大多数通路在三个批次中方向一致；少数通路（如 MAPK/ERK/p38/JNK）出现轻微批次差异，
+    但 meta Z 后总体方向稳定。
+  anomalies_or_limits: >
+    个别批次（如 batch2 的 mito_stress_cell_death）呈现较大正向偏差，
+    可能与该批次整体炎症基线偏高相关。
+
+# ---------- 5. Interpretation & Role in Chapter ----------
+interpretation:
+  minimal_bio_interpretation: >
+    EphB1 缺失导致多条促炎与膜域信号通路的转录活性下降，
+    指向 EphB1 在稳态条件下维持炎症感应与膜结构调控中的支持作用。
+  alternative_explanations: >
+    单纯转录结果无法排除蛋白活性调控的贡献；部分轻度批次差异可能来源于培养密度或动物个体差异。
+  summary_type: "supportive, descriptive"
+  claim_supported: "EphB1 通过调控促炎与应激相关通路构成其下游信号网络。"
+  link_to_previous: >
+    在前一节观察到 EphB1 缺失可缓解线粒体损伤后，本节进一步显示下游炎症与应激轴亦呈系统性减弱。
+  transition_to_next: >
+    下一节将整合 RNA 与脂质组机制指标，以构建 EphB1-线粒体-炎症之间的因果链路模型。
+
+ai_hints:
+  target_section: ["Results", "Discussion_mini", "Methods_diff"]
+  tone: "neutral"
+  target_journal_style: "Cell Metabolism"
+  language: "zh_en_mix"

@@ -1,0 +1,94 @@
+figure_id: "figure_7"
+title: "Ephb1-dependent signaling modules mediate cardiolipin bottlenecks via mechanistic axes"
+
+panels:
+
+  7A:
+    type: "concept_model"
+    question: >
+      Ephb1 缺失如何通过下游信号模块与多组学机制轴，
+      共同决定 CL 瓶颈（脂质指标）的变化？本图如何定义本章的
+      X–M–Y 中介分析框架？
+    data_source:
+      - "无直接数据输入（schematic 图）"
+      - "机制轴定义：multiomics_mech/scripts/rna/rna_mechanistic_gene_sets.yaml"
+      - "脂质指标定义：lipid_mechanistic_indicator.tsv"
+    method: >
+      绘制基于因果假设的概念示意图：Ephb1 deletion (X) →
+      下游信号模块 (signaling modules) → 多组学机制轴 (M_axis) →
+      cardiolipin bottleneck lipid indicators (Y)。
+      通过虚线/实线区分中介主链与支持性证据，并在角标给出
+      X–M–Y 的中介公式。
+    main_sentence: >
+      Ephb1 通过重塑特定下游信号模块，改变合成轴与氧化轴的强度，
+      最终决定 cardiolipin 瓶颈的方向与幅度；本 panel 建立了
+      后续中介分析的结构框架。
+
+  7B:
+    type: "downstream_module_selection"
+    question: >
+      Ephb1 缺失真正改变的是哪些“下游信号通路基因集”？
+      它们如何映射到前一章确认的“多组学机制轴”？
+    data_source:
+      - "RNA-seq differential expression results (DESeq2 outputs)"
+      - "clusterProfiler 富集结果（Hallmark / KEGG / Reactome）"
+      - "curated signaling modules: ephb1_downstream_modules.yaml"
+    method: >
+      从 WT/KO 差异中筛选 FDR<0.1 的显著 pathway，
+      结合文献与 Ephb1 信号学（ephrin–B, PI3K–AKT–mTOR, NF-κB,
+      PGC-1α）构建 curated downstream modules。
+      使用 gene set score（GSVA or ssGSEA）评估每个 module 在
+      每个样本中的活性，并通过 module–axis correlation heatmap
+      将它们映射到 mechanistic axes。
+    main_sentence: >
+      Ephb1 缺失主要影响三个核心下游模块：PGC-1α mitochondrial program、
+      PI3K–AKT–mTOR metabolic module 与 NF-κB inflammatory module，
+      这些模块在结构上锚定合成轴与氧化轴，是贯穿多组学机制链的
+      关键“下游驱动因子”。
+
+  7C:
+    type: "batch_replication"
+    question: >
+      Ephb1 下游信号模块的活性变化是否在多批次实验中高度稳定？
+      模块方向是否跨批次一致？
+    data_source:
+      - "Batch1/Batch2/Batch3 RNA-seq normalized matrix"
+      - "Downstream module gene sets（来自7B）"
+    method: >
+      对每个 batch 单独计算 module score (GSVA/ssGSEA)，
+      使用 KO vs WT 的线性模型估计效应值与 95% CI，
+      并以 forest plot 形式比较多批次结果；
+      计算 batch-consistency Z-score 或 meta-analytic 合并效应。
+    main_sentence: >
+      所有关键 Ephb1 下游模块在三个独立批次中均表现出方向一致的
+      KO/WT 差异，说明它们是稳定、可重复的 Ephb1-dependent signaling
+      signatures，并可作为后续中介分析的可靠“上游驱动”。
+
+  7D:
+    type: "mediation_analysis"
+    question: >
+      Ephb1 缺失对 cardiolipin 瓶颈脂质指标（CL_PG_ratio、
+      oxCL_CL_ratio）的影响，有多少比例可由合成轴与氧化轴
+      的改变来中介？
+    data_source:
+      - "Mechanistic axis scores (RNA + lipid integrated Z-score)"
+      - "Key lipid indicators（CL_PG_ratio, oxCL_CL_ratio, sum_PA）"
+      - "Group labels: KO vs WT"
+    method: >
+      使用 bootstrap 中介分析（X=Ephb1 KO, M=mechanistic axis score,
+      Y=lipid indicator），估计 a（X→M）、b（M→Y）、c’（X→Y direct）
+      与间接效应 a*b，并计算 proportion mediated。
+      对 Synthesis axis→CL_PG_ratio 与 Oxidation axis→oxCL_CL_ratio
+      的配对进行重点展示，以 forest plot 形式给出间接效应与 CI。
+    main_sentence: >
+      中介分析显示：Ephb1 缺失诱导的 cardiolipin 瓶颈主要由两条机制轴
+      传递——合成轴解释了 CL_PG_ratio 改变的 40–65%，氧化轴解释了
+      oxCL_CL_ratio 升高的 55–80% 间接效应，明确支持
+      “Ephb1 → 下游模块 → 机制轴 → cardiolipin 瓶颈” 的机制链。
+
+notes:
+  integration_summary: >
+    Figure 7 将 Ephb1 信号转导与多组学机制轴整合为闭环：
+    下游 signaling modules (7B–7C) 驱动机制轴，
+    机制轴则中介 Ephb1 对 cardiolipin 瓶颈的效应（7D），
+    并由 7A 所展示的因果框架统一起来。

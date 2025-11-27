@@ -21,7 +21,7 @@ rna_Y_registry: "ref/gene_symbol_to_ensembl.tsv"
 #   这里我设计为一个简单 TSV，而不是 YAML，方便你手动/脚本生成：
 #   列：feature_id, axis, effect_sign
 lipid_feature_set_tsv: "scripts/lipid/lipid_mechanistic_indicators.yaml"
-lipid_indicator_sign_yaml: "scripts/lipid/lipid_indicator_sign_matrix.yaml"
+# lipid_indicator_sign_yaml: "scripts/lipid/lipid_indicator_sign_matrix.yaml"
 lipid_Y_axis: "Supply"
 
 # 7) 输出目录

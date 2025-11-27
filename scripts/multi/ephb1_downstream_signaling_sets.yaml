@@ -2,11 +2,15 @@ pathways:
 
   EphB1_cytoskeleton_FAQ_Src_Rho:
     axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Membrane context"
+      - "Transport"
     label: "EphB1–FAK/Src–Rho GTPases (cytoskeleton & adhesion)"
     description: >
       EphB1 经典下游的细胞骨架/黏附调控模块，包括黏着斑激酶 FAK、
       Src 家族激酶，以及 RhoA/Rac1/Cdc42 等小 GTP 酶及其 GEF/GAP，
       通过影响细胞骨架重排、黏附复合体和线粒体定位/形态，间接调节线粒体功能。
+      模块得分升高代表 EphB1 相关的骨架/黏附信号被激活.
     genes:
       # receptor & adaptor
       - name: Ephb1
@@ -50,6 +54,9 @@ pathways:
 
   EphB1_PI3K_AKT_mTOR:
     axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Synthesis"
+      - "Supply"
     label: "PI3K–AKT–mTOR signaling downstream of EphB1"
     description: >
       EphB1 可通过 PI3K–AKT–mTOR 轴调节细胞生长、代谢和生物能量状态。
@@ -105,6 +112,9 @@ pathways:
 
   EphB1_MAPK_ERK_p38_JNK:
     axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Remodeling"
+      - "Oxidation"
     label: "MAPK cascades (ERK / p38 / JNK) downstream of EphB1"
     description: >
       EphB1 激活可通过 Ras→Raf→MEK→ERK 经典级联，
@@ -168,6 +178,9 @@ pathways:
 
   EphB1_JAK_STAT_inflammatory:
     axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Oxidation"
+      - "Membrane context"
     label: "JAK–STAT module (inflammation & cytokine signaling)"
     description: >
       EphB1 介导的免疫微环境变化可能通过 JAK–STAT 信号级联体现。
@@ -214,6 +227,9 @@ pathways:
 
   EphB1_NFkB_inflammation_ROS:
     axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Oxidation"
+      - "Membrane context"
     label: "NF-κB signaling (inflammation & ROS)"
     description: >
       NF-κB 通路是连接 EphB1 信号、炎症因子和 ROS/细胞死亡的重要枢纽。
@@ -260,6 +276,10 @@ pathways:
 
   EphB1_PGC1_NRF_mito_biogenesis:
     axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Supply"
+      - "Synthesis"
+      - "Membrane context"
     label: "PGC-1 / NRF / ERR axis (mitochondrial biogenesis)"
     description: >
       该模块聚焦 EphB1 可能调控的线粒体生物发生共激活因子及其核心转录因子，
@@ -297,4 +317,143 @@ pathways:
       - name: Cox4i1
         gene_effect_sign: 1
       - name: Atp5f1a
+        gene_effect_sign: 1
+  EphB1_integrin_caveolae_membrane_microdomain:
+    axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Membrane context"
+      - "Transport"
+    label: "Integrin–FA complex & membrane microdomains (EphB1 spatial signaling)"
+    description: >
+      该模块强调 EphB1 与整合素、黏着斑蛋白 (FA complex) 及膜微域 (caveolae)
+      的空间耦联。EphB1 与整合素 β1/β3、talin、paxillin 等的互作可重塑黏附、
+      跨膜机械信号与细胞骨架张力；caveolin 相关膜微域则影响 EphB1 的定位、
+      内吞与下游信号分配。该模块是连接 EphB1 信号与线粒体定位、膜接触点、
+      以及心磷脂富集内膜结构调控的重要空间组织节点。
+    genes:
+      # integrin receptors
+      - name: Itgb1
+        gene_effect_sign: 1
+      - name: Itgb3
+        gene_effect_sign: 1
+      - name: Itga5
+        gene_effect_sign: 1
+
+      # focal adhesion complex
+      - name: Pxn        # paxillin
+        gene_effect_sign: 1
+      - name: Tln1       # talin 1
+        gene_effect_sign: 1
+      - name: Tln2       # talin 2
+        gene_effect_sign: 1
+      - name: Vcl        # vinculin
+        gene_effect_sign: 1
+      - name: Fermt2     # kindlin-2
+        gene_effect_sign: 1
+
+      # caveolae / microdomain
+      - name: Cav1
+        gene_effect_sign: 1
+      - name: Cav2
+        gene_effect_sign: 1
+      - name: Flot1
+        gene_effect_sign: 1
+      - name: Flot2
+        gene_effect_sign: 1
+  EphB1_AMPK_energy_sensing:
+    axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Supply"
+      - "Oxidation"
+    label: "AMPK–TSC energy-sensing module"
+    description: >
+      该模块描述 EphB1 与细胞能量感知系统之间的耦联。AMPK 通过感应
+      AMP/ATP 比值活化，抑制 mTORC1（通过直接磷酸化 TSC2/raptor），
+      同时促进脂质氧化、线粒体生物发生以及 PGC-1α 的转录活性。
+      EphB1 对 AMPK 状态的调节可能是心磷脂可用性（PG/PA 池供给）、
+      线粒体应激耐受与内膜结构重塑的重要连接点。
+
+    genes:
+      # AMPK catalytic subunits
+      - name: Prkaa1
+        gene_effect_sign: 1
+      - name: Prkaa2
+        gene_effect_sign: 1
+
+      # AMPK regulatory (β/γ subunits)
+      - name: Prkab1
+        gene_effect_sign: 1
+      - name: Prkab2
+        gene_effect_sign: 1
+      - name: Prkag1
+        gene_effect_sign: 1
+
+      # TSC complex (AMPK activates TSC → inhibits mTORC1)
+      - name: Tsc1
+        gene_effect_sign: 1
+      - name: Tsc2
+        gene_effect_sign: 1
+
+      # downstream metabolic sensing
+      - name: Sirt1
+        gene_effect_sign: 1
+      - name: Ppargc1a   # PGC-1α (在生物发生模块已出现，此处作为 AMPK 下游连接点)
+        gene_effect_sign: 1
+      - name: Ppargc1b
+        gene_effect_sign: 1
+  EphB1_mito_stress_cell_death:
+    axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Oxidation"
+      - "Membrane context"
+    label: "Mitochondrial stress & cell death module (apoptosis / pyroptosis)"
+    description: >
+      该模块总结 EphB1 通过炎症、ROS、代谢压力影响线粒体损伤，
+      并进一步触发细胞死亡程序（凋亡、焦亡、坏死性凋亡）。包括
+      BCL-2 家族调节因子、线粒体应激相关蛋白、TNF–RIPK 信号、
+      NLRP3–caspase–GSDMD 焦亡轴。该模块与心磷脂氧化、mtROS、
+      内膜跨膜电位下降及 IL-1β 的释放高度耦联，是连接 EphB1
+      缺失 → CL 氧化上升 → inflammasome 激活的重要环节。
+
+    genes:
+      # BCL-2 family (apoptosis control)
+      - name: Bcl2
+        gene_effect_sign: -1        # 抗凋亡，上调 = 细胞死亡模块被抑制
+      - name: Bcl2l1    # Bcl-xL
+        gene_effect_sign: -1        # 抗凋亡，上调 = 细胞死亡模块被抑制
+      - name: Bax
+        gene_effect_sign: 1         # 促凋亡，上调 = 细胞死亡模块被激活
+      - name: Bak1
+        gene_effect_sign: 1
+      - name: Bnip3      # mito stress / hypoxia-induced
+        gene_effect_sign: 1
+      - name: Bnip3l
+        gene_effect_sign: 1
+
+      # TNF–RIPK necroptosis pathway
+      - name: Tnfrsf1a
+        gene_effect_sign: 1
+      - name: Ripk1
+        gene_effect_sign: 1
+      - name: Ripk3
+        gene_effect_sign: 1
+      - name: Mlkl
+        gene_effect_sign: 1
+
+      # NLRP3 inflammasome / pyroptosis
+      - name: Nlrp3
+        gene_effect_sign: 1
+      - name: Pycard     # ASC
+        gene_effect_sign: 1
+      - name: Casp1
+        gene_effect_sign: 1
+      - name: Gsdmd
+        gene_effect_sign: 1
+
+      # integrated stress response (ISR) / mito stress TFs
+      - name: Hif1a
+        gene_effect_sign: 1
+      - name: Atf4
+        gene_effect_sign: 1
+      - name: Ddit3      # CHOP
         gene_effect_sign: 1

@@ -156,7 +156,14 @@ per_sample_bio <- per_sample %>%
   filter(!is.na(group))
 
 ## 方便后续：axis 固定顺序
-axis_levels <- c("Synthesis", "Remodeling", "Oxidation", "Transport", "Supply")
+axis_levels <- c(
+  "Synthesis",
+  "Remodeling",
+  "Oxidation",
+  "Transport",
+  "Supply",
+  "Membrane context"
+)
 
 ## --------- 2. 箱线图：axis × batch × group ------------------
 

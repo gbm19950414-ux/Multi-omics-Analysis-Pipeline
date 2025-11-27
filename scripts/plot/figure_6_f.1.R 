@@ -1,0 +1,169 @@
+#!/usr/bin/env Rscript
+
+## ------------------------------------------------------------
+## figure_6_f.R
+##
+## 功能：
+##   从 figure_6_f_all_stats.tsv 中筛选 “主轴 × 关键 CL panel 表型” 的组合，
+##   输出候选列表：axis, phenotype, n_points, r, p, slope, dir_match。
+##
+## 用法：
+##   Rscript scripts/plot/figure_6_f.R \
+##     results/figs/figure_6_f_all_stats.tsv \
+##     results/figs/figure_6_f_candidates.tsv
+##
+## ------------------------------------------------------------
+
+suppressPackageStartupMessages({
+  library(readr)
+  library(dplyr)
+  library(stringr)
+  library(yaml)
+  library(purrr)
+})
+
+args <- commandArgs(trailingOnly = TRUE)
+
+default_stats <- "results/figs/figure_6_f_all_stats.tsv"
+default_out   <- "results/figs/figure_6_f_candidates.tsv"
+default_best  <- "results/figs/figure_6_f_best.tsv"
+
+if (length(args) < 1) {
+  cat("[WARN] 未提供参数，已使用默认路径。\n")
+  stats_path    <- default_stats
+  out_path      <- default_out
+  best_out_path <- default_best
+} else {
+  stats_path    <- args[1]
+  out_path      <- if (length(args) >= 2) args[2] else default_out
+  best_out_path <- if (length(args) >= 4) args[4] else default_best
+}
+
+cat("[INFO] 读取统计结果: ", stats_path, "\n", sep = "")
+stats_df_all <- readr::read_tsv(stats_path, col_types = cols())
+
+## ------------------------------------------------------------
+## 1. 从 lipid_mechanistic_indicators.yaml 读取主轴 & CL panel 指标
+## ------------------------------------------------------------
+
+## YAML 路径：如果作为第三个参数传入则优先使用，否则默认使用脚本目录下的路径
+lipid_yaml_path <- if (length(args) >= 3) args[3] else "scripts/lipid/lipid_mechanistic_indicators.yaml"
+
+cat("[INFO] 读取脂质指标 YAML: ", lipid_yaml_path, "\n", sep = "")
+lipid_ind_yaml <- yaml::read_yaml(lipid_yaml_path)
+
+mech_axes <- lipid_ind_yaml$mechanistic_axes
+if (is.null(mech_axes)) {
+  stop("[ERROR] lipid_mechanistic_indicators.yaml 中缺少 mechanistic_axes 字段\n")
+}
+
+## 主轴：默认使用 YAML 中定义的所有轴名称
+main_axes <- names(mech_axes)
+
+## CL panel 指标：从所有 mechanistic_axes 的 indicators$name 中汇总
+axis_indicator_pairs_all <- purrr::imap_dfr(mech_axes, function(ax_info, ax_name) {
+  inds <- ax_info$indicators
+  if (is.null(inds)) {
+    return(tibble(axis = character(0), phenotype = character(0), bottleneck_sign = numeric(0)))
+  }
+  tibble(
+    axis = ax_name,
+    phenotype = purrr::map_chr(inds, "name"),
+    bottleneck_sign = vapply(inds, function(x) {
+      if (!is.null(x$bottleneck_sign)) as.numeric(x$bottleneck_sign) else NA_real_
+    }, numeric(1))
+  )
+})
+
+cl_panel_phenotypes <- axis_indicator_pairs_all %>%
+  dplyr::pull(phenotype) %>%
+  unique()
+
+cat("[INFO] 主轴（来自 YAML）: ", paste(main_axes, collapse = ", "), "\n", sep = "")
+cat("[INFO] CL panel phenotypes（来自 YAML）数量: ", length(cl_panel_phenotypes), "\n", sep = "")
+
+## ------------------------------------------------------------
+## 2. 检查必要列是否存在
+## ------------------------------------------------------------
+
+needed_cols <- c("axis", "phenotype", "n_points", "r", "p", "slope", "dir_match")
+missing_cols <- setdiff(needed_cols, colnames(stats_df_all))
+if (length(missing_cols) > 0) {
+  stop("[ERROR] stats_tsv 缺少以下列: ",
+       paste(missing_cols, collapse = ", "), "\n",
+       "请确认该文件是由 figure_6_f.R 生成的 stats_df_all。\n")
+}
+
+## ------------------------------------------------------------
+## 3. 筛选出 “主轴 × CL panel 表型” 的组合
+## ------------------------------------------------------------
+
+candidates <- stats_df_all %>%
+  filter(
+    axis %in% main_axes,
+    phenotype %in% cl_panel_phenotypes
+  ) %>%
+  ## 可选：如果想丢掉只有 1–2 个点的组合，可以加 n_points >= 3
+  # filter(n_points >= 3) %>%
+  arrange(
+    factor(axis, levels = main_axes),
+    p,                      # p 值从小到大
+    desc(abs(r))            # |r| 从大到小
+  )
+
+cat("[INFO] 候选组合数: ", nrow(candidates), "\n", sep = "")
+
+## ------------------------------------------------------------
+## 3.1 按规则为每条轴自动挑选“最佳指标”
+##
+## 规则优先级：
+##   1) dir_match: match > unknown > mismatch
+##   2) n_points: n_points >= 3 优先
+##   3) p 值：更小优先
+##   4) |r|：绝对值更大优先
+## ------------------------------------------------------------
+
+candidates_scored <- candidates %>%
+  mutate(
+    dir_score = dplyr::case_when(
+      dir_match == "match"   ~ 2L,
+      dir_match == "unknown" ~ 1L,
+      dir_match == "mismatch" ~ 0L,
+      TRUE                   ~ 0L
+    ),
+    n_score = dplyr::if_else(n_points >= 3, 1L, 0L)
+  )
+
+best_per_axis <- candidates_scored %>%
+  group_by(axis) %>%
+  arrange(
+    dplyr::desc(dir_score),
+    dplyr::desc(n_score),
+    p,
+    dplyr::desc(abs(r))
+  ) %>%
+  slice(1) %>%
+  ungroup() %>%
+  select(axis, phenotype, n_points, r, p, slope, dir_match)
+
+best_per_axis <- best_per_axis %>%
+  arrange(factor(axis, levels = main_axes))
+
+cat("[INFO] 每条轴自动选择的最佳指标数: ", nrow(best_per_axis), "\n", sep = "")
+
+## ------------------------------------------------------------
+## 4. 输出候选列表
+## ------------------------------------------------------------
+
+dir.create(dirname(out_path), showWarnings = FALSE, recursive = TRUE)
+readr::write_tsv(candidates, out_path)
+
+dir.create(dirname(best_out_path), showWarnings = FALSE, recursive = TRUE)
+readr::write_tsv(best_per_axis, best_out_path)
+
+cat("[OK] 候选列表已写出到: ", out_path, "\n", sep = "")
+cat("[OK] 每轴最佳指标列表已写出到: ", best_out_path, "\n", sep = "")
+cat("[HINT] 建议下一步：\n",
+    "  1) 用 Excel / R 打开该 TSV，按 axis 分组观察：\n",
+    "     - 哪些 phenotype 的 p 值更小、r 的绝对值更大、dir_match 为 match；\n",
+    "  2) 为每条主轴选 1–2 个最干净的 phenotype，写入 figure_6_f.yaml 的 axis_phenotype_map。\n")

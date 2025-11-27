@@ -1,0 +1,43 @@
+data_files:
+  axis_effects_matrix: "results/multiomics/mechanistic_axis_effects_matrix.tsv"
+  lipid_indicator_de:  "results/lipid/tables/lipid_mechanistic_indicator_DE_per_batch.tsv"
+  lipid_indicator_yaml: "scripts/lipid/lipid_mechanistic_indicators.yaml"
+
+axes_to_plot:
+  - Synthesis
+  - Oxidation
+  - Supply
+  - Membrane context
+  - Remodeling
+  - Transport
+
+axis_phenotype_map:
+  Synthesis:
+    - "CL_PG_ratio"
+  Oxidation:
+    - "oxCL_CL_ratio"
+  Supply:
+    - "sum_PA"
+  Membrane context:
+    - "CL_fraction"
+    - "mito_lipid_mass"
+  Remodeling:
+    - "MLCL_CL_ratio"
+  Transport:
+    - "PA_CL_mismatch"
+    - "PA_PG_mismatch"
+
+
+output:
+  pdf: "results/figs/figure_6_f.pdf"          # 正式上图
+  png: "results/figs/figure_6_f.png"
+  stats_tsv: "results/figs/figure_6_f_all_stats.tsv"
+  full_pdf: "results/figs/figure_6_f_full.pdf"  # 全轴全指标补充图
+  full_png: "results/figs/figure_6_f_full.png"
+
+plot_size:
+  width: 16
+  height: 16
+
+transform_y:
+  mode: "none"

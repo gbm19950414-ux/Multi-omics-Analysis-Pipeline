@@ -99,7 +99,7 @@ axes_list <- gs_conf$axes
 # helper: 从一个“基因容器”（字符向量 / list / module$genes）里提取 gene_symbol 和 gene_effect_sign
 extract_genes_from_container <- function(container) {
   if (is.null(container)) {
-    return(tibble(gene_symbol = character(0), gene_effect_sign = numeric(0)))
+    return(tibble(gene_symbol = character(0), gene_effect_sign = numeric(0), weight = numeric(0)))
   }
 
   # 若是 module 结构，优先使用 $genes 字段
@@ -114,7 +114,8 @@ extract_genes_from_container <- function(container) {
     return(
       tibble(
         gene_symbol      = entries,
-        gene_effect_sign = rep(1, length(entries))
+        gene_effect_sign = rep(1, length(entries)),
+        weight           = rep(1, length(entries))
       )
     )
   }
@@ -126,7 +127,8 @@ extract_genes_from_container <- function(container) {
         if (is.character(e)) {
           tibble(
             gene_symbol      = e,
-            gene_effect_sign = 1
+            gene_effect_sign = 1,
+            weight           = 1
           )
         } else if (is.list(e)) {
           sym <- e$name
@@ -140,9 +142,14 @@ extract_genes_from_container <- function(container) {
           if (is.null(ges) || is.na(ges)) {
             ges <- 1
           }
+          w <- e$weight
+          if (is.null(w) || is.na(w)) {
+            w <- 1
+          }
           tibble(
             gene_symbol      = as.character(sym),
-            gene_effect_sign = as.numeric(ges)
+            gene_effect_sign = as.numeric(ges),
+            weight           = as.numeric(w)
           )
         } else {
           stop("[FATAL] 无法解析 gene entry（既不是字符向量也不是带 name/gene_effect_sign 的列表），请检查 YAML。")
@@ -177,7 +184,8 @@ axis_gene_tbl <- purrr::map2_dfr(
       return(tibble(
         axis             = character(0),
         gene_symbol      = character(0),
-        gene_effect_sign = numeric(0)
+        gene_effect_sign = numeric(0),
+        weight           = numeric(0)
       ))
     }
 
@@ -189,7 +197,7 @@ axis_gene_tbl <- purrr::map2_dfr(
         axis             = axis_name,
         gene_effect_sign = dplyr::if_else(is.na(gene_effect_sign), 1, gene_effect_sign)
       ) %>%
-      select(axis, gene_symbol, gene_effect_sign)
+      select(axis, gene_symbol, gene_effect_sign, weight)
   }
 )
 
@@ -220,7 +228,7 @@ if ("mapping" %in% names(gs_conf)) {
     )
   }
 
-  map_path <- map_conf$table
+  map_path <- "scripts/rna/rna_mechanistic_gene_sets_gene_registry.tsv"
   sym_col  <- map_conf$symbol_column
   ens_col  <- map_conf$ensembl_column
 
@@ -290,8 +298,10 @@ axis_lfc_long <- axis_gene_tbl %>%
   inner_join(lfc_long, by = "GeneID") %>%
   mutate(
     gene_effect_sign = dplyr::if_else(is.na(gene_effect_sign), 1, gene_effect_sign),
-    # NOTE: 这里使用 log2FC * gene_effect_sign 作为该基因在该轴上的有效 log2FC（值越高瓶颈越高）
-    effective_log2FC = log2FC * gene_effect_sign
+    weight           = dplyr::if_else(is.na(weight), 1, weight),
+    # NOTE: 这里使用 log2FC * gene_effect_sign * weight 作为该基因在该轴上的有效 log2FC，
+    # weight 由 YAML 中的 weight 字段给出，未指定时默认为 1。
+    effective_log2FC = log2FC * gene_effect_sign * weight
   )
 
 if (nrow(axis_lfc_long) == 0) {

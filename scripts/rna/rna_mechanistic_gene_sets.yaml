@@ -29,7 +29,7 @@ mapping:
   #   - name: ensembl_gene_id
   #   - name: gene_symbol
   # 建议放在 multiomics_mech/ref/gene_symbol_to_ensembl.tsv
-  table: "ref/gene_symbol_to_ensembl.tsv"
+  table: "scripts/rna/rna_mechanistic_gene_sets_gene_registry.tsv"
 
   # 映射表中对应的列名
   symbol_column: "gene_symbol"
@@ -39,426 +39,185 @@ mapping:
 # 后续你若想增加子路径（例如“CDP-DAG branch”），可以新增 module。
 
 axes:
-
-  # =========================
-  # 1. Synthesis Axis（合成轴）
-  # =========================
   Synthesis:
     description: >
       PA → CDP-DAG → PGP → PG → CL 的心磷脂生物合成链，
       以及决定前体 PA / CDP-DAG 供应和整体线粒体磷脂合成能力的相关通路。
     modules:
 
-      core_synthesis:
-        label: "Core CL synthesis enzymes"
-        description: "直接执行 PA → CDP-DAG → PGP → PG → CL 合成反应的关键酶"
-        genes:
-          - name: Tamm41   # PA → CDP-DAG
-            gene_effect_sign: -1 #上调 → 合成链更顺畅 → CL 供应更好 → 瓶颈减轻
-          - name: Pgs1     # CDP-DAG → PGP
-            gene_effect_sign: -1
-          - name: Ptpmt1   # PGP → PG
-            gene_effect_sign: -1
-          - name: Crls1    # PG → CL，最终合成酶
-            gene_effect_sign: -1
-        notes: >
-          若使用文献中将 CLS 作为 CRLS1 同义的标注，可在 extended_synthesis 中保留。
-
-      extended_precursor_pathway:
-        label: "Extended PA / CDP-DAG precursor pathway"
+      gene_set:
+        label: "Transcriptomic gene set for Synthesis axis"
         description: >
-          决定 PA、CDP-DAG 及 DAG 等前体供应量的上游代谢酶，
-          影响 CL 合成底物的可用性。
+          从 figure_6_b.xlsx 中 feature_type = "gene" 且 axis = "Synthesis" 的行自动生成。
         genes:
+          - name: Tamm41
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Pgs1
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Ptpmt1
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Crls1
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Ddit3
+            gene_effect_sign: 1
+            weight: 0.5
+          - name: Sirt3
+            gene_effect_sign: -1
+            weight: 0.3
 
-          - name: Cds1     # PA → CDP-DAG
-            gene_effect_sign: -1
-          - name: Cds2     # PA → CDP-DAG
-            gene_effect_sign: -1
-          - name: Lpin1    # PAP/LIPIN1，DAG ↔ PA
-            gene_effect_sign: -1
-          - name: Lpin2    # PAP/LIPIN2
-            gene_effect_sign: -1
-          - name: Lpin3    # PAP/LIPIN3
-            gene_effect_sign: -1
-          - name: Agpat1   # LPA → PA
-            gene_effect_sign: -1
-          - name: Agpat2
-            gene_effect_sign: -1
-          - name: Agpat3
-            gene_effect_sign: -1
-          - name: Agpat4
-            gene_effect_sign: -1
-          - name: Agpat5
-            gene_effect_sign: -1
-          - name: Gpam     # 小鼠 GPAT1
-            gene_effect_sign: -1
-          - name: Gpat2
-            gene_effect_sign: -1
-          - name: Gpat3
-            gene_effect_sign: -1
-          - name: Gpat4
-            gene_effect_sign: -1
-        notes: >
-          这一模块更多代表“前体供应能力”，适合与 Supply 轴交叉使用。
-
-      regulatory_modulators:
-        label: "Regulatory / signaling modulators of synthesis"
-        description: >
-          通过调节线粒体生成、营养感应和磷脂代谢通路，
-          间接影响 CL 合成能力的调控基因。
-        genes:
-          - name: Ppargc1a   # PGC-1α
-            gene_effect_sign: -1
-          - name: Mtor       # mTORC1 复合体核心
-            gene_effect_sign: -1
-          - name: Prkaa1     # AMPK α1
-            gene_effect_sign: -1
-          - name: Prkaa2     # AMPK α2
-            gene_effect_sign: -1
-        notes: >
-          这些基因更适合作为“机制背景”基因集，解释 CL 合成能力的上游调控状态。
-
-  # =========================
-  # 2. Remodeling Axis（重塑轴）
-  # =========================
   Remodeling:
     description: >
       CL ↔ MLCL 之间的脱酰 / 再酰化循环（Lands' remodeling），
       决定 CL 的 acyl 组成和功能完整性。
     modules:
 
-      core_remodeling:
-        label: "Core CL–MLCL remodeling enzymes"
-        description: "直接参与 CL ↔ MLCL 重塑的脱酰 / 再酰化酶"
-        genes:
-          - name: Taz      # Tafazzin
-            gene_effect_sign: -1
-          - name: Lclat1   # LYCAT/LCLAT1
-            gene_effect_sign: -1
-          - name: Pla2g6   # iPLA2-VIA，CL 脱酰
-            gene_effect_sign: -1
-        notes: >
-          该模块是重塑轴的核心 readout，通常与 MLCL/CL 比值高度对应。
-
-      phospholipase_acyltransferase_support:
-        label: "Additional phospholipase / acyltransferase support"
+      gene_set:
+        label: "Transcriptomic gene set for Remodeling axis"
         description: >
-          通过提供 FA-CoA 或参与磷脂脱酰 / 再酰化，
-          间接影响 CL 重塑效率。
+          从 figure_6_b.xlsx 中 feature_type = "gene" 且 axis = "Remodeling" 的行自动生成。
         genes:
-          - name: Pla2g4a
+          - name: Tafazzin
             gene_effect_sign: -1
-          - name: Pla2g3
+            weight: 1.0
+          - name: Lclat1
             gene_effect_sign: -1
-          - name: Pla2g7
-            gene_effect_sign: -1
+            weight: 1.0
+          - name: Pla2g6
+            gene_effect_sign: 1
+            weight: 0.5
           - name: Pnpla8
-            gene_effect_sign: -1
-          - name: Acsl1      # FA-CoA 合成
-            gene_effect_sign: -1
-          - name: Acsl4
-            gene_effect_sign: -1
-          - name: Acsl5
-            gene_effect_sign: -1
-        notes: >
-          可与 acyl species 的重塑 signature（如 18:2-rich pattern）联合解读。
+            gene_effect_sign: 1
+            weight: 0.3
 
-      structural_regulators:
-        label: "Structural / cristae regulators"
-        description: >
-          通过改变线粒体嵴结构和融合状态影响 CL-rich 区域的组织方式。
-        genes:
-          - name: Opa1
-            gene_effect_sign: -1
-          - name: Mfn1
-            gene_effect_sign: -1
-          - name: Mfn2
-            gene_effect_sign: -1
-        notes: >
-          TALDO1 等若有特定文献支持可加入；此模块偏“间接结构调控”。
-
-  # =========================
-  # 3. Oxidation / Degradation Axis（氧化与降解轴）
-  # =========================
   Oxidation:
     description: >
       通过脂氧合酶、ROS 生成和抗氧化系统决定 CL 被氧化、
       分解或保护的平衡。
     modules:
 
-      core_oxidation_enzymes:
-        label: "Core CL oxidation / degradation enzymes"
-        description: "直接参与 CL 氧化或氧化 CL 降解的关键酶"
-        genes:
-          - name: Alox5
-            gene_effect_sign: +1 #上调 → 氧化反应更强 / 氧化 CL 产生更多 → 瓶颈加重
-          - name: Alox12
-            gene_effect_sign: +1
-          - name: Alox15
-            gene_effect_sign: +1
-          - name: Cyp2e1
-            gene_effect_sign: +1
-          - name: Cyp3a11   # 小鼠 CYP3A 家族代表
-            gene_effect_sign: +1
-          - name: Pla2g6
-            gene_effect_sign: +1
-          - name: Pnpla8
-            gene_effect_sign: +1
-        notes: >
-          CYP3A 家族成员已替换为小鼠 Cyp3a11，可按你的注释进一步扩展。
-
-      ros_generation_redox:
-        label: "Mitochondrial / cellular ROS generation and redox"
+      gene_set:
+        label: "Transcriptomic gene set for Oxidation axis"
         description: >
-          决定 ROS 产生与线粒体氧化还原状态的基因，
-          影响 CL 氧化压力。
+          从 figure_6_b.xlsx 中 feature_type = "gene" 且 axis = "Oxidation" 的行自动生成。
         genes:
-          - name: Cybb      # 小鼠 NOX2
-            gene_effect_sign: +1
-          - name: Nox4
-            gene_effect_sign: +1
-          - name: Ucp2
-            gene_effect_sign: +1
-          - name: Ucp3
-            gene_effect_sign: +1
-          # 复合体 I 相关（根据数据可进一步细化）
-          - name: Ndufs1
-            gene_effect_sign: +1
-          - name: Ndufs2
-            gene_effect_sign: +1
-          - name: Ndufs3
-            gene_effect_sign: +1
-          - name: Ndufv1
-            gene_effect_sign: +1
-          - name: Ndufv2
-            gene_effect_sign: +1
-        notes: >
-          若需要可将整个 NDUFS/NDUFV 家族纳入一个更大的 gene set。
+          - name: Alox15
+            gene_effect_sign: 1
+            weight: 1.0
+          - name: Cybb
+            gene_effect_sign: 1
+            weight: 0.7
+          - name: Cyp2e1
+            gene_effect_sign: 1
+            weight: 0.5
+          - name: Pla2g6
+            gene_effect_sign: 1
+            weight: 0.5
 
-      antioxidant_protective:
-        label: "Antioxidant / detoxification (CL-protective) genes"
-        description: "抗氧化和解毒系统，保护 CL 免受过度氧化"
-        genes:
-          - name: Gpx4
-            gene_effect_sign: -1
-          - name: Sod1
-            gene_effect_sign: -1
-          - name: Sod2
-            gene_effect_sign: -1
-          - name: Prdx3
-            gene_effect_sign: -1
-          - name: Prdx5
-            gene_effect_sign: -1
-          - name: Cat      # Catalase
-            gene_effect_sign: -1
-        notes: >
-          在机制解释时通常期待其表达与 oxCL/CL 呈负相关。
-
-  # =========================
-  # 4. Transport / Distribution Axis（转运与膜分布轴）
-  # =========================
   Transport:
     description: >
       通过膜翻转酶、scramblase、接触点复合体和脂质转运蛋白
       调控 CL 在 IMM/OMM 及 ER–mitochondria 之间的分布。
     modules:
 
-      membrane_scramblase_flippase:
-        label: "Scramblases / flippases"
-        description: "参与双层膜磷脂外翻 / 内翻与分布调节的候选因子"
-        genes:
-          - name: Plscr1
-            gene_effect_sign: -1
-          - name: Plscr2
-            gene_effect_sign: -1
-          - name: Plscr3
-            gene_effect_sign: -1
-          - name: Xkr8
-            gene_effect_sign: -1
-          - name: Xkr9
-            gene_effect_sign: -1
-          - name: Atp8b1
-            gene_effect_sign: -1
-          - name: Atp10a
-            gene_effect_sign: -1
-          - name: Atp10b
-            gene_effect_sign: -1
-        notes: >
-          目前 CL 专一性的证据有限，更多作为“膜分布环境”指标。
-
-      mito_contact_site:
-        label: "Mitochondrial contact site and cristae organizing system (MICOS / SAM / VDAC)"
+      gene_set:
+        label: "Transcriptomic gene set for Transport axis"
         description: >
-          决定 IMM–OMM 接触点与 cristae 链接的结构复合体，
-          间接影响 CL 在内外膜的分布与局部富集。
+          从 figure_6_b.xlsx 中 feature_type = "gene" 且 axis = "Transport" 的行自动生成。
         genes:
-          - name: Immt      # MIC60
-            gene_effect_sign: -1
-          - name: Chchd3    # MIC19
-            gene_effect_sign: -1
-          - name: Chchd6    # MIC25
-            gene_effect_sign: -1
-          - name: Minos1    # MIC10 / MINOS1
-            gene_effect_sign: -1
-          - name: Apoo      # MIC26
-            gene_effect_sign: -1
-          - name: Apool     # MIC27
-            gene_effect_sign: -1
-          - name: Samm50    # SAM50
-            gene_effect_sign: -1
-          - name: Vdac1
-            gene_effect_sign: -1
-          - name: Vdac2
-            gene_effect_sign: -1
-          - name: Vdac3
-            gene_effect_sign: -1
-        notes: >
-          使用 Minos1/Apoo/Apool 匹配小鼠 MICOS 复合体成员。
-
-      lipid_transfer_proteins:
-        label: "Lipid transfer proteins at ER–mito contact sites"
-        description: "在 ER–mito 接触点转运 PC/CL/PA 等的脂质转运蛋白"
-        genes:
-          - name: Stard7
-            gene_effect_sign: -1
-          - name: Stard3
-            gene_effect_sign: -1
-          - name: Stard10
-            gene_effect_sign: -1
           - name: Prelid1
             gene_effect_sign: -1
-          - name: Mtfp1    # 小鼠 MTP18 同源基因
+            weight: 1.0
+          - name: Triap1
             gene_effect_sign: -1
-        notes: >
-          可与 PG/PA、CL_fraction 等脂质指标联合解读“转运与膜接触点瓶颈”。
+            weight: 1.0
+          - name: Stard7
+            gene_effect_sign: -1
+            weight: 0.7
 
-  # =========================
-  # 5. Precursor Supply & Mitochondrial Capacity Axis（前体供给与线粒体容量轴）
-  # =========================
   Supply:
     description: >
       从碳源 → FA → 前体磷脂的供应链，以及线粒体生成与 OXPHOS 能力，
       共同决定可容纳 CL 的膜面积与底物供应。
     modules:
 
-      substrate_supply_FA_precursors:
-        label: "Substrate / FA precursor supply"
-        description: "从葡萄糖 / citrate 到 FA 的合成与不饱和化，决定 PA/PG 等前体可用性"
+      gene_set:
+        label: "Transcriptomic gene set for Supply axis"
+        description: >
+          从 figure_6_b.xlsx 中 feature_type = "gene" 且 axis = "Supply" 的行自动生成。
         genes:
           - name: Acly
             gene_effect_sign: -1
+            weight: 1.0
+          - name: Acaca
+            gene_effect_sign: -1
+            weight: 1.0
           - name: Fasn
             gene_effect_sign: -1
-          - name: Acaca    # ACC1
+            weight: 1.0
+          - name: Gpam
             gene_effect_sign: -1
-          - name: Acacb    # ACC2
+            weight: 1.0
+          - name: Agpat1
             gene_effect_sign: -1
-          - name: Scd1
+            weight: 1.0
+          - name: Acacb
             gene_effect_sign: -1
-        notes: >
-          若有转录组提示 FA 合成整体下调，可解释 ΣPG / ΣCL 同步降低。
-
-      mito_biogenesis:
-        label: "Mitochondrial biogenesis and mtDNA maintenance"
-        description: "反映线粒体数量与生成能力的经典基因集"
-        genes:
-          - name: Ppargc1a  # PGC-1α
+            weight: 0.5
+          - name: Agpat2
             gene_effect_sign: -1
-          - name: Nrf1
+            weight: 0.5
+          - name: Gpat2
             gene_effect_sign: -1
-          - name: Nfe2l2    # NRF2
+            weight: 0.5
+          - name: Gpat3
             gene_effect_sign: -1
+            weight: 0.3
+          - name: Gpat4
+            gene_effect_sign: -1
+            weight: 0.3
           - name: Tfam
             gene_effect_sign: -1
+            weight: 0.5
           - name: Polg
             gene_effect_sign: -1
-          - name: Polg2
-            gene_effect_sign: -1
+            weight: 0.3
           - name: Tomm20
             gene_effect_sign: -1
-          - name: Timm23
-            gene_effect_sign: -1
-        notes: >
-          可与 ΣCL、mito_lipid_mass 联合评估“线粒体总量 / 膜容量”变化。
-      
-      cristae_capacity:
-        label: "OXPHOS complexes I–V (cristae capacity)"
+            weight: 0.5
+
+  "Membrane context":
+    description: >
+      线粒体嵴 / cristae 结构、MICOS 复合体与 OPA1/OMA1 平衡等，决定
+      CL-rich 区域在内膜上的空间组织和膜环境，对 CL 功能起到“膜场景”修饰作用。
+    modules:
+
+      gene_set:
+        label: "Transcriptomic gene set for Membrane context axis"
         description: >
-          代表 OXPHOS 复合体丰度与 IMM 面积，间接反映可容纳 CL 的结构空间。
+          从 figure_6_b.xlsx 中 feature_type = "gene" 且 axis = "Membrane context" 的行自动生成。
         genes:
-          # Complex I (示例子集，可扩展为更大 gene set)
-          - name: Ndufs1
+          - name: Opa1
             gene_effect_sign: -1
-          - name: Ndufs2
+            weight: 1.0
+          - name: Immt
             gene_effect_sign: -1
-          - name: Ndufs3
+            weight: 1.0
+          - name: Chchd3
             gene_effect_sign: -1
-          - name: Ndufv1
+            weight: 0.7
+          - name: Chchd2
             gene_effect_sign: -1
-          - name: Ndufv2
-            gene_effect_sign: -1
-          # Complex II
-          - name: Sdha
-            gene_effect_sign: -1
-          - name: Sdhb
-            gene_effect_sign: -1
-          # Complex III
-          - name: Uqcrc1
-            gene_effect_sign: -1
-          - name: Uqcrc2
-            gene_effect_sign: -1
-          # Complex IV
-          - name: Cox4i1
-            gene_effect_sign: -1
-          - name: Cox4i2
-            gene_effect_sign: -1
-          # Complex V
-          - name: Atp5f1a
-            gene_effect_sign: -1
-          - name: Atp5f1b
-            gene_effect_sign: -1
+            weight: 0.5
           - name: Atp5mc1
             gene_effect_sign: -1
-        notes: >
-          若你已有自定义 OXPHOS 基因集，可以在此模块直接替换或扩容。
-          
-      pc_metabolism:
-        label: "PC metabolism (Kennedy pathway & remodeling)"
-        description: >
-          De novo phosphatidylcholine (PC) synthesis via the Kennedy pathway
-          and PC remodeling / interconversion with PE. This module links directly
-          to PC abundance, mito_lipid_mass (PC+PE+CL) and CL_fraction changes
-          observed in the lipidomic mechanistic indicators.
-        genes:
-          # Kennedy pathway core enzymes
-          - name: Chka      # Choline kinase α
+            weight: 0.5
+          - name: Cox4i1
             gene_effect_sign: -1
-          - name: Chkb      # Choline kinase β
-            gene_effect_sign: -1
-          - name: Pcyt1a    # CCTα, rate-limiting step of CDP-choline pathway
-            gene_effect_sign: -1
-          - name: Pcyt1b    # CCTβ
-            gene_effect_sign: -1
-          - name: Cept1     # Choline/ethanolamine phosphotransferase, final step to PC
-            gene_effect_sign: -1
-          - name: Pemt      # PE → PC methylation
-            gene_effect_sign: -1
-          # PC remodeling / deacylation–reacylation
-          - name: Lpcat1
-            gene_effect_sign: -1
-          - name: Lpcat2
-            gene_effect_sign: -1
-          - name: Lpcat3
-            gene_effect_sign: -1
-          - name: Lpcat4
-            gene_effect_sign: -1
-          - name: Lypla1
-            gene_effect_sign: -1
-          - name: Lypla2
-            gene_effect_sign: -1
-        notes: >
-          This module should be interpreted together with PC-related lipid
-          indicators (e.g. mito_lipid_mass, CL_fraction). You can later extend
-          it with additional Kennedy-pathway or LPCAT/LYPLA family members
-          depending on species and annotation.
+            weight: 0.3
+          - name: Oma1
+            gene_effect_sign: 1
+            weight: 0.3
