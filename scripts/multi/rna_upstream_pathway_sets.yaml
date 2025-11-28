@@ -40,7 +40,7 @@ pathways:
     axis: "Supply"
     label: "mTOR–SREBP-driven anabolic lipid synthesis"
     description: >
-      mTORC1 活性及其下游 SREBP1/2 靶基因，驱动 de novo 脄肪酸合成和
+      mTORC1 活性及其下游 SREBP1/2 靶基因，驱动 de novo 脂肪酸合成和
       磷脂前体（如 PA、PC、PE）的供给，偏向合成/同化代谢。以 mTOR 复合体
       自身及核心脂质生成酶为主，避免把 4E-BP1 这类翻译抑制因子当作转录 readout。
     genes:
@@ -201,4 +201,161 @@ pathways:
       - name: Dnm1l       # DRP1, fission, impacts cristae / contacts
         gene_effect_sign: 1
       - name: Opa1        # inner membrane fusion, cristae junctions
+        gene_effect_sign: 1
+
+  ## =========================================================
+  ## SYNTHESIS 轴：CL 合成酶级联与其上游调控
+  ## =========================================================
+
+  Synthesis_core_CL_synthesis_enzymes:
+    axis: "Synthesis"
+    label: "Core cardiolipin synthesis enzymes (PA→PG→CL)"
+    description: >
+      核心心磷脂合成酶级联（TAMM41 / PGS1 / PTPMT1 / CRLS1），
+      决定从 PA/PG 底物到成熟 CL 的“最后一公里”产能，是合成轴
+      最直接的酶学瓶颈读出。
+    genes:
+      - name: Tamm41      # PA→CDP-DAG on IMM
+        gene_effect_sign: 1
+      - name: Pgs1        # CDP-DAG→PGP
+        gene_effect_sign: 1
+      - name: Ptpmt1      # PGP→PG
+        gene_effect_sign: 1
+      - name: Crls1       # PG→CL (cardiolipin synthase)
+        gene_effect_sign: 1
+
+  Synthesis_TF_control_of_CL_machinery:
+    axis: "Synthesis"
+    label: "Transcriptional control of CL synthesis machinery"
+    description: >
+      通过 PGC-1 / ERR / NRF 等转录调控程序，上调心磷脂合成相关酶
+      与线粒体磷脂代谢基因的表达，间接增强 CL 合成能力。
+    genes:
+      - name: Ppargc1a    # PGC-1α, coactivator of mito lipid genes
+        gene_effect_sign: 1
+      - name: Esrra       # ERRα, partners with PGC-1α
+        gene_effect_sign: 1
+      - name: Gabpa       # GABPα / NRF2 (nuclear), mito gene TF
+        gene_effect_sign: 1
+      - name: Nrf1        # Nuclear respiratory factor 1
+        gene_effect_sign: 1
+      - name: Tfam        # mtDNA transcription/replication factor
+        gene_effect_sign: 1
+
+  ## =========================================================
+  ## REMODELING 轴：CL 重塑与 acyl 链编辑
+  ## =========================================================
+
+  Remodeling_TAZ_LCLAT1_acyl_chain_remodeling:
+    axis: "Remodeling"
+    label: "TAZ / LCLAT1-mediated CL acyl-chain remodeling"
+    description: >
+      以 TAZ / LCLAT1 为核心的心磷脂分子种 acyl 链重塑系统，
+      决定成熟 CL 的脂肪酸组成与功能质量，是重塑轴的直接执行模块。
+    genes:
+      - name: Taz         # Tafazzin, CL-specific transacylase
+        gene_effect_sign: 1
+      - name: Lclat1      # ALCAT1, CL acyltransferase
+        gene_effect_sign: 1
+      - name: Pla2g6      # iPLA2β, generates lyso-CL
+        gene_effect_sign: 1
+      - name: Pnpla8      # iPLA2γ, mito phospholipase
+        gene_effect_sign: 1
+
+  Remodeling_peroxisomal_FA_chain_editing:
+    axis: "Remodeling"
+    label: "Peroxisomal fatty-acid chain editing linked to CL"
+    description: >
+      过氧化物酶体 β-氧化与链长剪裁，通过调节 PUFA 供给间接影响
+      CL 重塑所需脂肪酸池。
+    genes:
+      - name: Acox1       # peroxisomal acyl-CoA oxidase
+        gene_effect_sign: 1
+      - name: Hsd17b4     # D-bifunctional protein, VLCFA oxidation
+        gene_effect_sign: 1
+      - name: Ehhadh      # peroxisomal L-bifunctional enzyme
+        gene_effect_sign: 1
+      - name: Pex5        # peroxisomal import receptor
+        gene_effect_sign: 1
+
+  ## =========================================================
+  ## OXIDATION 轴：驱动或限制 CL 氧化的 ROS 网络
+  ## =========================================================
+
+  Oxidation_mito_ROS_generators:
+    axis: "Oxidation"
+    label: "Mitochondrial ROS generators driving CL peroxidation"
+    description: >
+      线粒体电子传递链与相关 ROS 生成因子，增加局部氧自由基负荷，
+      推动心磷脂过氧化与氧化轴活跃度升高。
+    genes:
+      - name: Ndufs1      # Complex I core subunit
+        gene_effect_sign: 1
+      - name: Ndufs2
+        gene_effect_sign: 1
+      - name: Uqcrc1      # Complex III core protein
+        gene_effect_sign: 1
+      - name: Cycs        # Cytochrome c, CL peroxidase cofactor
+        gene_effect_sign: 1
+      - name: Nox4        # NADPH oxidase 4, mitochondrial ROS
+        gene_effect_sign: 1
+
+  Oxidation_antioxidant_defenses:
+    axis: "Oxidation"
+    label: "Mitochondrial antioxidant defenses limiting CL oxidation"
+    description: >
+      线粒体 / 细胞抗氧化系统（SOD2 / PRDX3 / GPX / CAT 等），
+      通过清除 ROS 抵消 CL 氧化压力，在氧化轴中多作为“保护性”反向 readout。
+    genes:
+      - name: Sod2        # Mn-SOD in matrix
+        gene_effect_sign: 1
+      - name: Prdx3       # mitochondrial peroxiredoxin
+        gene_effect_sign: 1
+      - name: Gpx1        # glutathione peroxidase
+        gene_effect_sign: 1
+      - name: Gpx4        # lipid hydroperoxide GPX
+        gene_effect_sign: 1
+      - name: Cat         # catalase
+        gene_effect_sign: 1
+      - name: Nfe2l2      # Nrf2, master antioxidant TF
+        gene_effect_sign: 1
+
+  ## =========================================================
+  ## MEMBRANE CONTEXT 轴：线粒体膜面积与 OXPHOS 结构
+  ## =========================================================
+
+  Membrane_context_mito_mass_surface_area:
+    axis: "Membrane context"
+    label: "Mitochondrial mass & membrane surface area"
+    description: >
+      线粒体生物发生与内膜/外膜面积扩张相关的调控因子，影响
+      每个细胞可供 CL 和其它磷脂“铺展”的总膜面积，是膜环境轴的几何基础。
+    genes:
+      - name: Ppargc1a    # PGC-1α, drives mito biogenesis
+        gene_effect_sign: 1
+      - name: Nrf1
+        gene_effect_sign: 1
+      - name: Gabpa
+        gene_effect_sign: 1
+      - name: Tfam
+        gene_effect_sign: 1
+      - name: Tfb2m
+        gene_effect_sign: 1
+
+  Membrane_context_OXPHOS_supercomplex_organization:
+    axis: "Membrane context"
+    label: "Respiratory-chain / OXPHOS supercomplex organization"
+    description: >
+      呼吸链复合体与 ATP 合酶的装配因子，影响 CL 富集的蛋白–脂质超复合体
+      稳定性，从而改变 CL 在内膜中的“使用场景”。
+    genes:
+      - name: Ndufs1
+        gene_effect_sign: 1
+      - name: Uqcrc1
+        gene_effect_sign: 1
+      - name: Cox4i1      # Complex IV subunit
+        gene_effect_sign: 1
+      - name: Atp5f1a     # ATP synthase F1 α subunit
+        gene_effect_sign: 1
+      - name: Atp5mc1     # ATP synthase membrane subunit c
         gene_effect_sign: 1

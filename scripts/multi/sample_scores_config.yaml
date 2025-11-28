@@ -8,14 +8,14 @@ lipid_matrix: "results/lipid/tables/lipid_matrix_allfat_log2_filtered.tsv"
 sample_matching: "scripts/multi/sample_matching_batch1.tsv"
 
 # 4) 中介 M（RNA signaling/pathway）的 gene set YAML + 名称
-rna_M_yaml: "scripts/multi/ephb1_downstream_signaling_sets.yaml"
-rna_M_pathway: "EphB1_PGC1_NRF_mito_biogenesis"
-rna_M_registry: "scripts/multi/ephb1_downstream_signaling_sets_gene_registry.tsv"
+ephb1_M_yaml: "scripts/multi/ephb1_downstream_signaling_sets.yaml"
+ephb1_M_pathway: ""
+ephb1_M_registry: "scripts/multi/ephb1_downstream_signaling_sets_gene_registry.tsv"
 
 # 5) 机制轴 Y（RNA 版）的 gene set YAML + axis 名称
-rna_Y_yaml: "scripts/rna/rna_mechanistic_gene_sets.yaml"
-rna_Y_axis: "Supply"
-rna_Y_registry: "ref/gene_symbol_to_ensembl.tsv"
+upstream_M_yaml: "scripts/multi/rna_upstream_pathway_sets.yaml"
+upstream_M_axis: ""
+upstream_M_registry: "scripts/multi/rna_upstream_pathway_sets_gene_registry.tsv"
 
 # 6) 脂质版 Y：使用的 axis feature 集（可选）
 #   这里我设计为一个简单 TSV，而不是 YAML，方便你手动/脚本生成：

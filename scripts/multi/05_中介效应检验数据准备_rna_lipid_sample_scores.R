@@ -107,13 +107,10 @@ required_fields <- c(
   "rna_counts",
   "lipid_matrix",
   "sample_matching",
-  "rna_M_yaml",
-  "rna_M_pathway",
-  "rna_Y_yaml",
-  "rna_Y_axis",
+  "ephb1_M_yaml",
+  "upstream_M_yaml",
   "lipid_feature_set_tsv",      # now used as lipid indicator def YAML
   "lipid_indicator_sign_yaml",  # new: sign matrix YAML
-  "lipid_Y_axis",
   "outdir"
 )
 
@@ -129,15 +126,11 @@ rna_counts      <- cfg$rna_counts
 lipid_matrix    <- cfg$lipid_matrix
 sample_matching <- cfg$sample_matching
 
-rna_M_yaml      <- cfg$rna_M_yaml
-rna_M_pathway   <- cfg$rna_M_pathway
+ephb1_M_yaml      <- cfg$ephb1_M_yaml
+upstream_M_yaml      <- cfg$upstream_M_yaml
 
-rna_Y_yaml      <- cfg$rna_Y_yaml
-rna_Y_axis      <- cfg$rna_Y_axis
-
-lipid_feature_set_tsv   <- cfg$lipid_feature_set_tsv
-lipid_indicator_sign_yaml <- cfg$lipid_indicator_sign_yaml
-lipid_Y_axis            <- cfg$lipid_Y_axis
+lipid_feature_set_tsv      <- cfg$lipid_feature_set_tsv
+lipid_indicator_sign_yaml  <- cfg$lipid_indicator_sign_yaml
 
 outdir           <- cfg$outdir
 
@@ -146,15 +139,12 @@ cat("[INFO] 05_rna_lipid_sample_scores.R\n")
 cat("  RNA counts       : ", rna_counts,      "\n", sep = "")
 cat("  Lipid matrix     : ", lipid_matrix,    "\n", sep = "")
 cat("  Sample matching  : ", sample_matching, "\n", sep = "")
-cat("  RNA M YAML       : ", rna_M_yaml,      "\n", sep = "")
-cat("  RNA M pathway    : ", rna_M_pathway,   "\n", sep = "")
-cat("  RNA Y YAML       : ", rna_Y_yaml,      "\n", sep = "")
-cat("  RNA Y axis       : ", rna_Y_axis,      "\n", sep = "")
-cat("  RNA M registry    : ", cfg$rna_M_registry %||% "(auto *_gene_registry.tsv)", "\n", sep = "")
-cat("  RNA Y registry    : ", cfg$rna_Y_registry %||% "(auto *_gene_registry.tsv)", "\n", sep = "")
+cat("  RNA M YAML       : ", ephb1_M_yaml,      "\n", sep = "")
+cat("  RNA Y YAML       : ", upstream_M_yaml,      "\n", sep = "")
+cat("  RNA M registry    : ", cfg$ephb1_M_registry %||% "(auto *_gene_registry.tsv)", "\n", sep = "")
+cat("  RNA Y registry    : ", cfg$upstream_M_registry %||% "(auto *_gene_registry.tsv)", "\n", sep = "")
 cat("  Lipid indicator def : ", lipid_feature_set_tsv,      "\n", sep = "")
 cat("  Lipid sign YAML     : ", lipid_indicator_sign_yaml,  "\n", sep = "")
-cat("  Lipid Y axis        : ", lipid_Y_axis,               "\n", sep = "")
 cat("  Outdir           : ", outdir,          "\n", sep = "")
 cat("============================================================\n\n")
 
@@ -296,35 +286,50 @@ cat("  [rna_expr_log2] genes = ", nrow(rna_expr_log2),
 
 cat("\n[STEP3] 计算 RNA M_score（通路级，中介变量）...\n")
 
-if (!file.exists(rna_M_yaml)) {
-  stop("[ERROR] 找不到 RNA M YAML: ", rna_M_yaml)
+if (!file.exists(ephb1_M_yaml)) {
+  stop("[ERROR] 找不到 RNA M YAML: ", ephb1_M_yaml)
 }
 
-M_cfg <- yaml::read_yaml(rna_M_yaml)
+M_cfg <- yaml::read_yaml(ephb1_M_yaml)
 if (is.null(M_cfg$pathways)) {
   stop("[ERROR] RNA M YAML 中未找到 'pathways' 顶层字段。")
 }
 
-M_pathway_list <- M_cfg$pathways[[rna_M_pathway]]
-if (is.null(M_pathway_list)) {
-  stop("[ERROR] 在 RNA M YAML 中找不到指定 pathway: ", rna_M_pathway)
+M_pathways <- M_cfg$pathways
+if (length(M_pathways) == 0) {
+  stop("[ERROR] RNA M YAML 中 'pathways' 为空，至少需要一个通路。")
 }
 
-M_gene_tbl_sym <- purrr::map_dfr(M_pathway_list$genes, function(g) {
-  tibble::tibble(
-    gene_symbol      = g$name,
-    gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
-  )
-})
+# 将所有 EphB1 下游信号通路的基因集展开为长表，保留 pathway 名称用于列名
+M_gene_tbl_sym <- purrr::imap_dfr(
+  M_pathways,
+  function(pw, pw_name) {
+    genes <- pw$genes
+    if (is.null(genes)) {
+      return(tibble::tibble(
+        pathway          = character(0),
+        gene_symbol      = character(0),
+        gene_effect_sign = numeric(0)
+      ))
+    }
+    purrr::map_dfr(genes, function(g) {
+      tibble::tibble(
+        pathway          = pw_name,
+        gene_symbol      = g$name,
+        gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
+      )
+    })
+  }
+)
 
-yaml_dir_M  <- dirname(rna_M_yaml)
-yaml_base_M <- tools::file_path_sans_ext(basename(rna_M_yaml))
+yaml_dir_M  <- dirname(ephb1_M_yaml)
+yaml_base_M <- tools::file_path_sans_ext(basename(ephb1_M_yaml))
 default_registry_M  <- file.path(yaml_dir_M, paste0(yaml_base_M, "_gene_registry.tsv"))
-registry_M <- cfg$rna_M_registry %||% default_registry_M
+registry_M <- cfg$ephb1_M_registry %||% default_registry_M
 
 if (!file.exists(registry_M)) {
   stop("[ERROR] 找不到 RNA M gene registry: ", registry_M,
-       "\n请在配置文件中通过 rna_M_registry 指定，或在 YAML 同目录下生成 *_gene_registry.tsv。")
+       "\n请在配置文件中通过 ephb1_M_registry 指定，或在 YAML 同目录下生成 *_gene_registry.tsv。")
 }
 
 reg_M <- readr::read_tsv(registry_M, show_col_types = FALSE)
@@ -337,59 +342,99 @@ M_gene_tbl <- M_gene_tbl_sym %>%
             by = "gene_symbol") %>%
   rename(GeneID = ensembl_gene_id)
 
-cat("  [RNA M gene set] n_gene = ", nrow(M_gene_tbl),
+cat("  [RNA M gene set] n_pathway = ", length(unique(M_gene_tbl$pathway)),
+    " ; total n_gene = ", nrow(M_gene_tbl),
     " ; matched Ensembl = ", sum(!is.na(M_gene_tbl$GeneID)), "\n", sep = "")
 
-M_score_RNA <- compute_score_rna(rna_expr_log2, M_gene_tbl, effect_sign_col = "gene_effect_sign")
+# 对每个 pathway 计算一个样本级 M_score 列，列名直接使用 YAML 中的 pathway 名称
+M_scores_list <- M_gene_tbl %>%
+  dplyr::filter(!is.na(GeneID)) %>%
+  split(.$pathway) %>%
+  purrr::map(~ compute_score_rna(rna_expr_log2, .x, effect_sign_col = "gene_effect_sign"))
+
+M_score_df <- tibble::tibble(rna_sample_id = colnames(rna_expr_log2))
+for (pw_name in names(M_scores_list)) {
+  vec <- M_scores_list[[pw_name]]
+  M_score_df[[pw_name]] <- vec[M_score_df$rna_sample_id]
+}
 
 ## ---------------- 4. RNA Y_score: mechanistic axis ----------
 
 cat("\n[STEP4] 计算 RNA Y_score（机制轴级）...\n")
 
-if (!file.exists(rna_Y_yaml)) {
-  stop("[ERROR] 找不到 RNA Y YAML: ", rna_Y_yaml)
+if (!file.exists(upstream_M_yaml)) {
+  stop("[ERROR] 找不到 RNA Y YAML: ", upstream_M_yaml)
 }
 
-Y_cfg <- yaml::read_yaml(rna_Y_yaml)
-if (is.null(Y_cfg$axes)) {
-  stop("[ERROR] RNA Y YAML 中未找到 'axes' 顶层字段。")
-}
+Y_cfg <- yaml::read_yaml(upstream_M_yaml)
 
-if (is.null(Y_cfg$axes[[rna_Y_axis]])) {
-  stop("[ERROR] 在 RNA Y YAML 中找不到指定 axis: ", rna_Y_axis)
-}
-
-axis_obj <- Y_cfg$axes[[rna_Y_axis]]
-
-Y_gene_tbl_sym <- purrr::imap_dfr(
-  axis_obj$modules,
-  function(mod, mod_name) {
-    genes <- mod$genes
-    if (is.null(genes)) {
-      return(tibble::tibble(
-        module           = character(0),
-        gene_symbol      = character(0),
-        gene_effect_sign = numeric(0)
-      ))
-    }
-    purrr::map_dfr(genes, function(g) {
-      tibble::tibble(
-        module           = mod_name,
-        gene_symbol      = g$name,
-        gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
+# 支持两种结构：
+# 1) 旧的 mechanistic 轴：axes -> modules -> genes
+# 2) 新的上游调控通路：pathways -> genes
+if (!is.null(Y_cfg$axes)) {
+  Y_gene_tbl_sym <- purrr::imap_dfr(
+    Y_cfg$axes,
+    function(axis_obj, axis_name) {
+      modules <- axis_obj$modules %||% list()
+      purrr::imap_dfr(
+        modules,
+        function(mod, mod_name) {
+          genes <- mod$genes
+          if (is.null(genes)) {
+            return(tibble::tibble(
+              axis             = character(0),
+              module           = character(0),
+              gene_symbol      = character(0),
+              gene_effect_sign = numeric(0)
+            ))
+          }
+          purrr::map_dfr(genes, function(g) {
+            tibble::tibble(
+              axis             = axis_name,
+              module           = mod_name,
+              gene_symbol      = g$name,
+              gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
+            )
+          })
+        }
       )
-    })
-  }
-)
+    }
+  )
+} else if (!is.null(Y_cfg$pathways)) {
+  Y_gene_tbl_sym <- purrr::imap_dfr(
+    Y_cfg$pathways,
+    function(pw, pw_name) {
+      genes <- pw$genes
+      if (is.null(genes)) {
+        return(tibble::tibble(
+          axis             = character(0),
+          module           = character(0),
+          gene_symbol      = character(0),
+          gene_effect_sign = numeric(0)
+        ))
+      }
+      purrr::map_dfr(genes, function(g) {
+        tibble::tibble(
+          axis             = pw_name,
+          module           = NA_character_,
+          gene_symbol      = g$name,
+          gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
+        )
+      })
+    }
+  )
+} else {
+  stop("[ERROR] RNA Y YAML 中既没有 'axes' 也没有 'pathways' 顶层字段，无法解析。")
+}
 
-yaml_dir_Y  <- dirname(rna_Y_yaml)
-yaml_base_Y <- tools::file_path_sans_ext(basename(rna_Y_yaml))
+yaml_dir_Y  <- dirname(upstream_M_yaml)
+yaml_base_Y <- tools::file_path_sans_ext(basename(upstream_M_yaml))
 default_registry_Y  <- file.path(yaml_dir_Y, paste0(yaml_base_Y, "_gene_registry.tsv"))
-registry_Y <- cfg$rna_Y_registry %||% default_registry_Y
+registry_Y <- cfg$upstream_M_registry %||% default_registry_Y
 
 if (!file.exists(registry_Y)) {
   stop("[ERROR] 找不到 RNA Y gene registry: ", registry_Y,
-       "\n请在配置文件中通过 rna_Y_registry 指定，或为 rna_mechanistic_gene_sets.yaml 生成对应 *_gene_registry.tsv。")
+       "\n请在配置文件中通过 upstream_M_registry 指定，或为对应 YAML 生成 *_gene_registry.tsv。")
 }
 
 reg_Y <- readr::read_tsv(registry_Y, show_col_types = FALSE)
@@ -402,12 +447,20 @@ Y_gene_tbl <- Y_gene_tbl_sym %>%
             by = "gene_symbol") %>%
   rename(GeneID = ensembl_gene_id)
 
-cat("  [RNA Y axis gene set] axis = ", rna_Y_axis,
-    " ; n_gene = ", nrow(Y_gene_tbl),
+cat("  [RNA Y axis/pathway gene set] n_axis/pathway = ", length(unique(Y_gene_tbl$axis)),
+    " ; total n_gene = ", nrow(Y_gene_tbl),
     " ; matched Ensembl = ", sum(!is.na(Y_gene_tbl$GeneID)), "\n", sep = "")
 
+Y_scores_list <- Y_gene_tbl %>%
+  dplyr::filter(!is.na(GeneID)) %>%
+  split(.$axis) %>%
+  purrr::map(~ compute_score_rna(rna_expr_log2, .x, effect_sign_col = "gene_effect_sign"))
 
-Y_score_RNA <- compute_score_rna(rna_expr_log2, Y_gene_tbl, effect_sign_col = "gene_effect_sign")
+Y_score_df <- tibble::tibble(rna_sample_id = colnames(rna_expr_log2))
+for (axis_name in names(Y_scores_list)) {
+  vec <- Y_scores_list[[axis_name]]
+  Y_score_df[[axis_name]] <- vec[Y_score_df$rna_sample_id]
+}
 
 # Initialize lipid score flag
 has_lipid_scores <- FALSE
@@ -422,24 +475,25 @@ if (!is.null(precomp_lipid_path) && file.exists(precomp_lipid_path)) {
 
   lipid_axis_df <- readr::read_tsv(precomp_lipid_path, show_col_types = FALSE)
 
-  axis_name <- cfg$lipid_Y_axis        # 例如 "Supply" / "Remodeling" / ...
-  score_col <- paste0(axis_name, "_score")
+  # 自动识别所有 *_score 列，一次性 join 进来，作为 CL 相关多轴脂质表型
+  score_cols <- grep("_score$", colnames(lipid_axis_df), value = TRUE)
 
-  if (!score_col %in% colnames(lipid_axis_df)) {
-    stop("[ERROR] 在 ", precomp_lipid_path, " 中找不到列: ", score_col,
-         "\n       请确认列名是否为 '<轴名>_score'，例如 Supply_score。")
+  if (length(score_cols) == 0) {
+    stop("[ERROR] 在 ", precomp_lipid_path, " 中找不到任何 *_score 列，无法作为脂质轴分数使用。")
   }
 
-  # lipid_sample_id 需与 sample_matching 中的形式一致（如 batch1_HO_5）
+  message("  [INFO] 将以下脂质轴分数列 join 到 sample_matching: ",
+          paste(score_cols, collapse = ", "))
+
   Y_score_lipid_df <- lipid_axis_df %>%
-    dplyr::transmute(
+    dplyr::mutate(
       lipid_sample_id = if ("batch" %in% colnames(.)) {
         paste0(.data$batch, "_", .data$sample_id)
       } else {
         .data$sample_id
-      },
-      Y_score_lipid   = .data[[score_col]]
-    )
+      }
+    ) %>%
+    dplyr::select(lipid_sample_id, dplyr::all_of(score_cols))
 
   sm <- sm %>%
     dplyr::left_join(Y_score_lipid_df, by = "lipid_sample_id")
@@ -475,23 +529,16 @@ score_tbl <- sm %>%
     group = group,
     batch = batch
   ) %>%
-  dplyr::mutate(
-    M_score_RNA   = M_score_RNA[match(rna_sample_id, names(M_score_RNA))],
-    Y_score_RNA   = Y_score_RNA[match(rna_sample_id, names(Y_score_RNA))]
-    # 注意：这里不再触碰 Y_score_lipid，直接沿用 STEP5 join 的结果
-  )
-
-# if (has_lipid_scores) {
-#   # 不需要再 mutate 一次 Y_score_lipid
-# }
+  dplyr::left_join(M_score_df, by = "rna_sample_id") %>%
+  dplyr::left_join(Y_score_df, by = "rna_sample_id")
 
 out_path <- file.path(outdir, "sample_scores_for_mediation.tsv")
 readr::write_tsv(score_tbl, out_path)
 
 cat("  [OK] 写出样本级得分表: ", out_path, "\n", sep = "")
-cat("  列包括：sample_id, group, batch, rna_sample_id, lipid_sample_id,\n")
-cat("          M_score_RNA, Y_score_RNA",
-    if (has_lipid_scores) ", Y_score_lipid\n" else "\n", sep = "")
+cat("  列包括：sample_id, group, batch, rna_sample_id, lipid_sample_id，\n")
+cat("          多列 RNA M 候选通路分数、RNA Y 候选轴/通路分数",
+    if (has_lipid_scores) "，以及一组脂质轴得分列。\n" else "。\n", sep = "")
 
 cat("============================================================\n")
 cat("[DONE] 07_rna_lipid_sample_scores.R 完成。\n")
