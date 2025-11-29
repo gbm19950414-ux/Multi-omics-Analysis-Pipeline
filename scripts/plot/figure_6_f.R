@@ -259,6 +259,27 @@ full_data <- full_data %>%
 
 cat("[INFO] 用于统计分析的点数: ", nrow(full_data), "\n", sep = "")
 
+## 为 full 图和主图准备 y 变量名称
+y_var_full <- "diff_HO_WT"
+y_lab_full <- "CL phenotype difference (HO - WT)"
+
+if (!is.null(transform_y_mode) && identical(transform_y_mode, "z_by_indicator")) {
+  if (nrow(full_data) > 0) {
+    full_data <- full_data %>%
+      group_by(phenotype) %>%
+      mutate(
+        diff_HO_WT_z = ifelse(
+          sd(diff_HO_WT, na.rm = TRUE) > 0,
+          (diff_HO_WT - mean(diff_HO_WT, na.rm = TRUE)) / sd(diff_HO_WT, na.rm = TRUE),
+          0
+        )
+      ) %>%
+      ungroup()
+    y_var_full <- "diff_HO_WT_z"
+    y_lab_full <- "Standardized CL phenotype difference (z, HO - WT)"
+  }
+}
+
 ## ---------------- 8. 计算所有 axis-phenotype 对的相关系数/回归 ---------
 
 calc_cor <- function(x, y, method = "pearson") {
@@ -366,7 +387,7 @@ if (!is.null(transform_y_mode) && identical(transform_y_mode, "z_by_indicator"))
 
 ## 如配置要求，先输出“全轴全指标”补充图（使用原始 diff_HO_WT 作为 y）
 if (!is.null(out_full_pdf) || !is.null(out_full_png)) {
-  p_full <- ggplot(full_plot_data, aes(x = combined_z, y = diff_HO_WT)) +
+  p_full <- ggplot(full_plot_data, aes(x = combined_z, y = .data[[y_var_full]])) +
     geom_point() +
     geom_smooth(
       method = "lm",
@@ -394,7 +415,7 @@ if (!is.null(out_full_pdf) || !is.null(out_full_png)) {
     ) +
     labs(
       x = "Multi-omics mechanistic axis effect (HO vs WT, combined Z)",
-      y = "CL phenotype difference (HO - WT)",
+      y = y_lab_full,
       color = "Direction match"
     ) +
     theme_bw() +
@@ -430,7 +451,7 @@ p <- ggplot(plot_data, aes(x = combined_z, y = .data[[y_var]])) +
     aes(color = dir_match),
     show.legend = TRUE
   ) +
-  facet_grid(axis ~ phenotype, scales = if (identical(transform_y_mode, "z_by_indicator")) "free_x" else "free") +
+  facet_grid(axis ~ phenotype, scales = "free") +
   ## 在每个 panel 右上角写 r, p
   geom_text(
     data = stats_df_plot,

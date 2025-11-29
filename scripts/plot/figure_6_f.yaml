@@ -5,6 +5,9 @@ data_files:
 
 use_all_indicators: true
 
+transform_y:
+  mode: "none"
+
 axes_to_plot:
   - Synthesis
   - Oxidation
@@ -41,6 +44,3 @@ output:
 plot_size:
   width: 16
   height: 16
-
-transform_y:
-  mode: "none"
