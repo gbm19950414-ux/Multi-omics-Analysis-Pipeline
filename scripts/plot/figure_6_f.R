@@ -171,13 +171,15 @@ axis_combined <- axis_long %>%
 
 cat("[INFO] axis_combined: nrow = ", nrow(axis_combined), "\n", sep = "")
 
-## 如有 axes_to_plot 限定，就在这里过滤
-if (!is.null(axes_to_plot)) {
-  axis_combined <- axis_combined %>%
-    filter(axis %in% axes_to_plot)
-}
+## 用于构造 axis × phenotype 的全组合
+axes_all <- sort(unique(axis_combined$axis))
 
-## ---------------- 4. 读取脂质指标 YAML，构造所有 axis-phenotype 对 ---------------------
+## ---------------- 4. 读取脂质指标 YAML，构造 axis × phenotype 全组合 ---------------------
+##
+## 方案 a：每个 axis 与所有指标做回归分析：
+##   - 从 YAML 中只提取“所有 mechanistic 指标的列表”，不再用 mechanistic_axes 来限制 axis–indicator 映射；
+##   - 使用 expand_grid(axis = axes_all, phenotype = phenos_all) 构造全组合。
+## -------------------------------------------------------------------
 
 if (!is.null(lipid_ind_yaml_path)) {
   cat("[STEP3] 读取脂质指标 YAML: ", lipid_ind_yaml_path, "\n", sep = "")
@@ -196,18 +198,29 @@ if (!is.null(lipid_ind_yaml_path)) {
   if (is.null(mech_axes)) {
     stop("[ERROR] lipid_indicator_yaml 文件中缺少 mechanistic_axes 字段\n")
   }
-  # 构造 axis_indicator_pairs_all: data.frame with columns axis, phenotype
-  axis_indicator_pairs_all <- purrr::imap_dfr(mech_axes, function(ax_info, ax_name) {
+
+  ## 从所有 axis 的 indicators 中提取去重的指标列表
+  phenos_all <- purrr::imap_dfr(mech_axes, function(ax_info, ax_name) {
     inds <- ax_info$indicators
     if (is.null(inds)) {
-      return(tibble(axis = character(0), phenotype = character(0)))
+      return(tibble(phenotype = character(0)))
     }
     tibble(
-      axis = ax_name,
       phenotype = purrr::map_chr(inds, "name")
     )
-  })
-  cat("[INFO] 从 lipid_indicator_yaml 中获得 axis-phenotype 对数: ", nrow(axis_indicator_pairs_all), "\n", sep = "")
+  }) %>%
+    distinct(phenotype) %>%
+    dplyr::pull(phenotype)
+
+  cat("[INFO] 从 lipid_indicator_yaml 中获得指标种类数 (去重): ", length(phenos_all), "\n", sep = "")
+
+  ## 构造 axis_indicator_pairs_all：每个 axis 与所有 phenotype 的笛卡尔积
+  axis_indicator_pairs_all <- tidyr::expand_grid(
+    axis      = axes_all,
+    phenotype = phenos_all
+  )
+
+  cat("[INFO] 按方案 a 使用 axis × phenotype 全组合对数: ", nrow(axis_indicator_pairs_all), "\n", sep = "")
 } else {
   stop("[ERROR] 配置文件中缺少 data_files.lipid_indicator_yaml，无法获取全部 axis-indicator 对\n")
 }
