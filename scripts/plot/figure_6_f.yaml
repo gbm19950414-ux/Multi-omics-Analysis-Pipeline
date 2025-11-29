@@ -3,6 +3,8 @@ data_files:
   lipid_indicator_de:  "results/lipid/tables/lipid_mechanistic_indicator_DE_per_batch.tsv"
   lipid_indicator_yaml: "scripts/lipid/lipid_mechanistic_indicators.yaml"
 
+use_all_indicators: true
+
 axes_to_plot:
   - Synthesis
   - Oxidation
@@ -14,6 +16,7 @@ axes_to_plot:
 axis_phenotype_map:
   Synthesis:
     - "CL_PG_ratio"
+    - "sum_CL"
   Oxidation:
     - "oxCL_CL_ratio"
   Supply:

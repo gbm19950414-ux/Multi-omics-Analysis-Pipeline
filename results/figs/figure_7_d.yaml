@@ -1,0 +1,118 @@
+# ============================================================
+# schema.yaml v2 —— 单个 panel 的结构化写作模版
+# Figure 7D：Mediation analysis connecting EphB1 → mediator → CL-axis phenotype
+# ============================================================
+
+meta:
+  figure: "Figure 7"
+  panel: "D"
+  short_title: "EphB1–signal–mechanism 因果链条的中介分析"
+  chapter: "7.4 Mediation analysis links EphB1 signaling to CL-axis bottlenecks"
+  experiment_id: "2025-03-21_mediation_CL_axes"
+  version: 2
+
+assets:
+  main_figure_file: "results/figs/figure_7_d.pdf"
+  raw_data_files:
+    - "results/figs/mediation_top_hits_M1.tsv"
+    - "results/figs/mediation_top_hits_M2.tsv"
+  stats_files:
+    - "results/figs/figure_7_d_mediation_top_hits_M1.pdf"
+    - "results/figs/figure_7_d_mediation_top_hits_M2.pdf"
+  analysis_scripts:
+    - "scripts/analysis/06_mediation_analysis_minimal.R"
+  supplementary_items:
+    - "Figure S7D"   # 可放全部 axis × mediator 组合
+
+# ---------- 1. Scientific Question ----------
+question:
+  context_from_previous: >
+    在 7B–7C 已经确认 EphB1 下游信号通路在 KO 中受到抑制，并且与 CL 机制轴变化方向一致之后，
+    本节进一步检验这种一致性是否体现为真实的因果链：EphB1 缺失是否需要通过这些 signaling / pathway 模块，
+    才能驱动 CL 机制轴的下降。
+  core_question: >
+    EphB1 缺失对 CL 机制轴（Y）的影响，在多大程度上是通过特定 mediator（M1：下游 signaling；M2：上游 CL-axis RNA pathways）间接实现？
+  hypothesis_or_expectation: >
+    如果 EphB1 的确通过转录与信号调控模块控制 CL metabolism，则间接效应 a*b 应显著且方向与 Figure 6 的瓶颈方向一致。
+  importance_reason: >
+    中介分析提供了因果路径的定量证据，是将机制轴从“相关”提升到“因果链条”的关键步骤。
+
+# ---------- 2. Rationale / Design Logic ----------
+rationale:
+  model_and_system: >
+    采用三元因果结构 X→M→Y，其中 X 为基因型（WT=0, KO=1），
+    M 分别来自 RNA-based pathway modules（M1）和 CL-axis upstream transcriptomic modules（M2），
+    Y 为六大 CL 机制轴的综合得分。
+  key_variables: >
+    自变量为 EphB1 基因型，mediator 为 pathway/axis module score，Y 为 axis-level mechanistic score（Figure 6 已定义）。
+  control_logic: >
+    将 X 对 Y 的总效应分解为直接效应 c' 与经 M 传递的间接效应 a*b，判断 pathway 是否真实参与 EphB1→CL-axis 的链路。
+  core_justification: >
+    若某 pathway 是 EphB1 控制 CL metabolism 的关键环节，则必须同时满足：X→M（a）与 M→Y（b）均显著且方向一致。
+
+# ---------- 3. Methods（差异性信息） ----------
+methods:
+  inherits_from_protocol: "default_mediation_pipeline_CL_axes"
+  biological_material: >
+    使用 WT 与 Ephb1−/− 巨噬细胞的整合 multi-omics 数据，
+    包括 RNA-seq derived pathway scores 与 lipid/RNA derived CL-axis scores。
+  experimental_groups: >
+    仅基因型为自变量，不添加外源刺激；所有 mediator 与 outcome 以统一的 axis 定义（Figure 6）标准化。
+  stimuli_and_treatment: "无外源刺激，分析稳态差异。"
+  time_points: "单一稳态时间点。"
+  dose_info: ""
+  readout_and_assay: >
+    mediator 取自 curated downstream signaling modules（M1）或 upstream CL-axis regulatory pathways（M2），
+    outcome 为六大 axis score；通过 5000 次 bootstrap 估计 a、b、c、c' 与 ab。
+  replicates: >
+    每组 4–5 生物学重复；M1/M2 分别使用相同的样本矩阵。
+  analysis_notes: >
+    间接效应 a*b 采用 percentile bootstrap CI；结果以 rank-significance 形式呈现，
+    并按机制轴方向校准（与 Figure 6 一致）。
+  minimal_methods_summary: >
+    使用 WT/KO 的 multi-omics 机制轴得分进行因果中介分析，
+    分别以下游 signaling（M1）或 CL-axis upstream pathways（M2）为 mediator，
+    估计 EphB1 缺失对机制轴的直接与间接效应。
+
+# ---------- 4. Results：结构化描述 ----------
+results:
+  data_direction: >
+    无论使用 M1 或 M2，多个 CL 机制轴（Synthesis、Supply、Membrane context）均呈明显负向间接效应，
+    表明 EphB1 缺失通过降低 pathway 活性间接导致机制轴下降。
+  stats_summary: >
+    M1 的 a*b 范围约 −20 至 0，M2 约 −15 至 0；bootstrap CI 多数不跨 0，
+    且 rank 前三的 axis 在两套 mediator 中部分重叠，方向一致。
+  key_numbers: >
+    M1 中 Synthesis 和 Membrane-context 轴的 ab 最显著（约 −15 至 −20）；
+    M2 中 Oxidation / Remodeling 的 ab 更集中（约 −8 至 −12）。
+  group_difference_statement: >
+    结果表明 EphB1 缺失对多个 CL 机制轴的影响中，有可量化的比例是通过 signaling / transcriptomic pathways 传递的，
+    从而支持 Figure 7A–7C 所提出的因果链条。
+  robustness_and_qc: >
+    M1 和 M2 虽来源不同但结论趋同，说明 EphB1 的下游与上游调控模块共同参与 CL-axis 瓶颈形成。
+  anomalies_or_limits: >
+    个别 axis（如 Synthesis）在 M1/M2 模型中的 rank 存在微调，可能反映 mediator 层的差异来源。
+
+# ---------- 5. Interpretation & Role in Chapter ----------
+interpretation:
+  minimal_bio_interpretation: >
+    EphB1 缺失通过削弱其下游信号通路与 CL-axis 调控模块，部分中介了 CL synthesis/supply/membrane-context 的下降，
+    提供了机制瓶颈形成的因果证据。
+  alternative_explanations: >
+    中介分析基于稳态数据，仍可能存在未测量的协变量；p 值与 CI 更适合作为方向性证据而非严格显著性检验。
+  summary_type: "supportive, exploratory"
+  claim_supported: >
+    EphB1→regulatory pathway→CL-axis 的因果链条在统计上得到支持，
+    是解释 Figure 6 所见 CL 机制瓶颈的关键路径。
+  link_to_previous: >
+    在确认 pathway 与 axis 在方向和相关性上高度一致（Figure 7B–7C）之后，
+    本节进一步证明这种一致性可部分解释 EphB1 缺失对机制轴的影响。
+  transition_to_next: >
+    下一节（7E）将检验这些中介链条是否最终体现为真实的脂质与炎症终点 readout。
+
+# ---------- 6. AI Writing Hints ----------
+ai_hints:
+  target_section: ["Results", "Discussion_mini", "Methods_diff"]
+  tone: "neutral"
+  target_journal_style: "Nature Metabolism"
+  language: "zh_en_mix"

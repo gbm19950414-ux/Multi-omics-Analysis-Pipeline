@@ -1,0 +1,94 @@
+# ============================================================
+# figure_7_a.yaml —— EphB1–signal–mechanism 核心模型（最终版）
+# ============================================================
+
+meta:
+  figure: "Figure 7"
+  panel: "A"
+  short_title: "EphB1 依赖信号通路介导心磷脂机制瓶颈的总体模型图"
+  chapter: "3.3 EphB1-dependent signaling pathways mediating the cardiolipin bottleneck"
+  experiment_id: "model_assembly_no_raw_experiment"
+  version: 3
+
+assets:
+  main_figure_file: "figures/F7/figure_7_a_ephb1_signaling_model.pdf"
+  raw_data_files: []
+  stats_files:
+    - "results/rna/tables/ephb1_downstream_signaling_scores_per_batch.tsv"
+    - "results/axis/tables/axis_upstream_support_overall.tsv"
+    - "results/lipid/tables/lipid_mechanistic_indicators_per_sample.tsv"
+  analysis_scripts:
+    - "scripts/rna/04_rna_ephb1_downstream_scores.R"
+    - "scripts/axis/03_axis_upstream_support.R"
+    - "scripts/lipid/05a_lipid_mechanistic_indicators_per_batch.R"
+  supplementary_items:
+    - "Figure S7A"
+    - "Table S7A"
+
+# ---------- 1. Scientific Question ----------
+question:
+  context_from_previous: "前一节（Figure 6）我们已经确定 EphB1 缺失导致的多组学一致机制瓶颈，包括合成轴显著下降与氧化轴上升。"
+  core_question: "EphB1 缺失对心磷脂瓶颈的效应是否通过特定的上游信号通路实现？"
+  hypothesis_or_expectation: "若 EphB1 通过调控线粒体生物发生与炎症 ROS 通路影响 CL 代谢，则其下游通路活动应与机制轴及 CL 指标的方向一致。"
+  importance_reason: "只有明确介导链条（EphB1 → 信号通路 → CL 机制轴），才能建立具有因果指向的机制解释并引出后续中介分析（7C–7D）。"
+
+# ---------- 2. Rationale / Design Logic ----------
+rationale:
+  model_and_system: "模型基于跨批次 RNA-seq 与脂质组的整合结果，结合在 axis_upstream_support_overall.tsv 中筛选出的关键上游通路。"
+  key_variables: "关注 EphB1 基因状态（WT vs HO）、其下游信号通路活动、对应机制轴 Z 值、以及 CL/oxCL 表型指标。"
+  control_logic: "所有箭头均来自真实数据的方向：包括通路 z_pathway、轴 Z、CL_PG_ratio、oxCL_CL_ratio 以及 IL-1β 的变化。"
+  core_justification: "模型图需浓缩 Figure 7 的整体逻辑，使后续所有 panel（7B–7E）都有明确“因果链”参照框架。"
+
+# ---------- 3. Methods（差异性信息） ----------
+methods:
+  inherits_from_protocol: "default_multiomics_axis_and_pathway_inference"
+  biological_material: "三批次 RNA-seq、三批次脂质组学，以及 CL panel 实验数据（同 Figure 6）。"
+  experimental_groups: "Ephb1 WT 与 Ephb1−/−（HO）巨噬细胞，同一批次内采用一致处理流程。"
+  stimuli_and_treatment: "无外加刺激；机制轴与通路来源于稳态转录组与脂质组。"
+  time_points: "单时间点稳态测量。"
+  dose_info: ""
+  readout_and_assay: "RNA 采用 DESeq2 LFC；脂质指标依据 ALR/CLR 后推导；通路分数与机制 Z 采用 gene_effect_sign 与 signed_z 聚合。"
+  replicates: "每批次 n=3–5；跨批次通过 Stouffer Z 或平均 Z 进行合并。"
+  analysis_notes: "本 panel 仅为模型整合图，不直接包含统计检验，但所有箭头方向均基于 Figure 6 与 Figure 7B–7D 的数据方向。"
+  minimal_methods_summary: "模型图整合自三批次 RNA-seq 与脂质组分析，通路和机制轴方向基于标准化 LFC、axis_score 与 CL/oxCL 指标推断。"
+
+# ---------- 4. Results（对应模型图的“文字化”） ----------
+results:
+  data_direction: >
+    EphB1 缺失（HO）总体下调线粒体生物发生/PGC-1α 模块，上调 NF-κB/炎症 ROS 模块；
+    对应地，机制轴层面表现为 Synthesis axis 降低而 Oxidation axis 增强；
+    脂质表型层面则表现为 CL_PG_ratio 和 tetra-18:2 CL 均下降，而 oxCL_CL_ratio 上升；
+    下游 IL-1β 释放亦伴随下降。
+  stats_summary: >
+    方向由多批次 Z 值与差异分析一致支持：PGC-1α 模块 z_pathway < 0；炎症 ROS z_pathway > 0；
+    Synthesis axis 综合 Z < 0 (p<0.05)，Oxidation axis 综合 Z > 0 (p<0.05)；
+    CL_PG_ratio 与 tetra-18:2 CL 在 HO 中下降，oxCL_CL_ratio 上升（各批次差异方向一致）。
+  key_numbers: >
+    Synthesis axis: meta-Z ≈ −2.8；Oxidation axis: meta-Z ≈ +2.5；
+    CL_PG_ratio 在 HO 中约下降 15–25%；oxCL_CL_ratio 上升约 10–18%。
+  group_difference_statement: >
+    综合结果表明 EphB1 缺失使线粒体合成轴受抑、氧化轴增强，从而导致 CL 供应减少与氧化负担上升。
+  robustness_and_qc: >
+    所有方向均在 ≥2 批次中重复；关键机制轴在 RNA 与 lipid 端方向一致；CL panel 表型与机制预测一致。
+  anomalies_or_limits: >
+    个别批次中通路 z_pathway 绝对值较小，但方向保持一致，不影响总体模型构建。
+
+# ---------- 5. Interpretation & Role in Chapter ----------
+interpretation:
+  minimal_bio_interpretation: >
+    该模型表明 EphB1 通过调控线粒体生物发生与炎症 ROS 通路，进而影响 CL 合成与氧化相关的机制轴，最终形成可观测的 CL 缺乏与氧化升高表型。
+  alternative_explanations: >
+    不排除 EphB1 缺失同时影响其他代谢或炎症途径；模型仅描述方向性证据而非严格因果。
+  summary_type: "supportive, descriptive"
+  claim_supported: "EphB1 经由特定信号通路介导 CL 机制瓶颈，而非直接作用于脂质合成酶。"
+  link_to_previous: >
+    承接 Figure 6 中识别出的机制瓶颈，本图将其嵌入含有信号通路层级的统一解释框架。
+  transition_to_next: >
+    后续 Figure 7B–7D 将基于该模型，对每一条链路（EphB1→通路、通路→机制轴、机制轴→CL 表型）进行定量检验，包括中介分析。
+
+# ---------- 6. AI Writing Hints ----------
+ai_hints:
+  target_section: ["Results", "Discussion_mini"]
+  tone: "neutral"
+  target_journal_style: "Cell Metabolism"
+  language: "zh_en_mix"
