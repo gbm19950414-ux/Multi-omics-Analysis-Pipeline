@@ -325,6 +325,8 @@ run_one_mediation <- function(dat_full, mediator_col, outcome_col, B = 5000) {
 
   set.seed(12345)  # 使结果可复现
   boot_ab <- numeric(B)
+  boot_a  <- numeric(B)
+  boot_b  <- numeric(B)
 
   for (b_i in seq_len(B)) {
     idx <- sample.int(n, size = n, replace = TRUE)
@@ -363,13 +365,20 @@ run_one_mediation <- function(dat_full, mediator_col, outcome_col, B = 5000) {
     }
 
     if (!ok || is.na(a_bi) || is.na(b_bi)) {
+      boot_a[b_i]  <- NA_real_
+      boot_b[b_i]  <- NA_real_
       boot_ab[b_i] <- NA_real_
     } else {
+      boot_a[b_i]  <- a_bi
+      boot_b[b_i]  <- b_bi
       boot_ab[b_i] <- a_bi * b_bi
     }
   }
 
   boot_ab_valid <- boot_ab[!is.na(boot_ab)]
+  boot_a_valid  <- boot_a[!is.na(boot_a)]
+  boot_b_valid  <- boot_b[!is.na(boot_b)]
+
   if (length(boot_ab_valid) < length(boot_ab) * 0.5) {
     warning("[WARN] 有大量 bootstrap 样本无法拟合模型，bootstrap 结果可能极不稳定。\n")
   }
@@ -377,9 +386,21 @@ run_one_mediation <- function(dat_full, mediator_col, outcome_col, B = 5000) {
   ab_boot_mean <- mean(boot_ab_valid, na.rm = TRUE)
   ab_boot_ci   <- quantile(boot_ab_valid, probs = c(0.025, 0.975), na.rm = TRUE)
 
+  a_boot_mean <- mean(boot_a_valid, na.rm = TRUE)
+  a_boot_ci   <- quantile(boot_a_valid, probs = c(0.025, 0.975), na.rm = TRUE)
+
+  b_boot_mean <- mean(boot_b_valid, na.rm = TRUE)
+  b_boot_ci   <- quantile(boot_b_valid, probs = c(0.025, 0.975), na.rm = TRUE)
+
   message("  [INFO] Bootstrap 间接效应均值 = ", round(ab_boot_mean, 4),
           " ; 95% CI = [", round(ab_boot_ci[1], 4), ", ",
           round(ab_boot_ci[2], 4), "]")
+  message("  [INFO] Bootstrap a 均值 = ", round(a_boot_mean, 4),
+          " ; 95% CI = [", round(a_boot_ci[1], 4), ", ",
+          round(a_boot_ci[2], 4), "]")
+  message("  [INFO] Bootstrap b 均值 = ", round(b_boot_mean, 4),
+          " ; 95% CI = [", round(b_boot_ci[1], 4), ", ",
+          round(b_boot_ci[2], 4), "]")
 
   summary_row <- tibble::tibble(
     n               = n,
@@ -411,11 +432,21 @@ run_one_mediation <- function(dat_full, mediator_col, outcome_col, B = 5000) {
 
     ab_boot_mean    = ab_boot_mean,
     ab_boot_ci_low  = unname(ab_boot_ci[1]),
-    ab_boot_ci_high = unname(ab_boot_ci[2])
+    ab_boot_ci_high = unname(ab_boot_ci[2]),
+
+    a_boot_mean     = a_boot_mean,
+    a_boot_ci_low   = unname(a_boot_ci[1]),
+    a_boot_ci_high  = unname(a_boot_ci[2]),
+
+    b_boot_mean     = b_boot_mean,
+    b_boot_ci_low   = unname(b_boot_ci[1]),
+    b_boot_ci_high  = unname(b_boot_ci[2])
   )
 
   list(
     summary_row = summary_row,
+    boot_a      = boot_a,
+    boot_b      = boot_b,
     boot_ab     = boot_ab
   )
 }
@@ -479,13 +510,23 @@ for (m_col in mediator_cols) {
 
         ab_boot_mean    = NA_real_,
         ab_boot_ci_low  = NA_real_,
-        ab_boot_ci_high = NA_real_
+        ab_boot_ci_high = NA_real_,
+
+        a_boot_mean     = NA_real_,
+        a_boot_ci_low   = NA_real_,
+        a_boot_ci_high  = NA_real_,
+
+        b_boot_mean     = NA_real_,
+        b_boot_ci_low   = NA_real_,
+        b_boot_ci_high  = NA_real_
       )
 
       tmp_boot <- tibble::tibble(
         mediator_col = m_col,
         outcome_col  = y_col,
         iter         = integer(0),
+        a            = numeric(0),
+        b            = numeric(0),
         ab           = numeric(0)
       )
     } else {
@@ -494,6 +535,8 @@ for (m_col in mediator_cols) {
         mediator_col = m_col,
         outcome_col  = y_col,
         iter         = seq_along(res$boot_ab),
+        a            = res$boot_a,
+        b            = res$boot_b,
         ab           = res$boot_ab
       )
     }

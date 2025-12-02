@@ -27,89 +27,120 @@ assets:
 # ---------- 1. Scientific Question ----------
 question:
   context_from_previous: >
-    在 7B–7C 已经确认 EphB1 下游信号通路在 KO 中受到抑制，并且与 CL 机制轴变化方向一致之后，
-    本节进一步检验这种一致性是否体现为真实的因果链：EphB1 缺失是否需要通过这些 signaling / pathway 模块，
-    才能驱动 CL 机制轴的下降。
+    在 7B–7C 已经确认多条 EphB1 下游信号通路在 KO 中被系统性削弱，
+    并且这些通路的活性变化与 membrane context 轴 score 的降低方向一致之后，
+    本节进一步检验这种“一致性”是否体现为真实的因果链：
+    即 EphB1 缺失是否必须通过这些下游 signaling/pathway 模块，
+    才能驱动 membrane context 这一 CL 机制轴的整体下降。
   core_question: >
-    EphB1 缺失对 CL 机制轴（Y）的影响，在多大程度上是通过特定 mediator（M1：下游 signaling；M2：上游 CL-axis RNA pathways）间接实现？
+    在所有 EphB1 下游通路候选中，哪些通路显著中介了 EphB1 缺失对 membrane context 轴 score 的影响？
+    换言之，EphB1→下游 pathway→membrane context 轴这一链条中，
+    是哪几条具体的 signaling 模块在承担主要的“中介责任”？
   hypothesis_or_expectation: >
-    如果 EphB1 的确通过转录与信号调控模块控制 CL metabolism，则间接效应 a*b 应显著且方向与 Figure 6 的瓶颈方向一致。
+    预期与 Figure 6–7B–7C 一致：EphB1 缺失会降低多条 downstream signaling 通路的活性（a>0），
+    而这些通路的高活性有利于维持 membrane context 轴（b < 0 或与瓶颈方向一致），
+    因此其间接效应 a×b（ab）应为负值且 bootstrap 置信区间不跨 0。
   importance_reason: >
-    中介分析提供了因果路径的定量证据，是将机制轴从“相关”提升到“因果链条”的关键步骤。
-
+    如果能够在统计上证实“EphB1→下游通路→membrane context 轴”的负向中介效应，
+    则可以将前面基于相关性的观察（通路抑制 + 轴分数下降）提升为更明确的因果链条，
+    明确是哪些具体的 signaling 模块在解释 EphB1 缺失造成的膜环境轴瓶颈。
 # ---------- 2. Rationale / Design Logic ----------
 rationale:
   model_and_system: >
-    采用三元因果结构 X→M→Y，其中 X 为基因型（WT=0, KO=1），
-    M 分别来自 RNA-based pathway modules（M1）和 CL-axis upstream transcriptomic modules（M2），
-    Y 为六大 CL 机制轴的综合得分。
+    采用经典三元因果结构 X→M→Y，其中 X 为 Ephb1 基因型（WT=0, Ephb1−/−=1），
+    M 为基于 RNA-seq 的 EphB1 downstream signaling pathway sample-level score
+    （例如 PI3K–AKT–mTOR、cytoskeleton/FAK/Src、JAK–STAT、NFκB 等），
+    Y 为在 Figure 6 中定义的 membrane context 机制轴 score（整合脂质与 RNA 信息的轴级读数）。
   key_variables: >
-    自变量为 EphB1 基因型，mediator 为 pathway/axis module score，Y 为 axis-level mechanistic score（Figure 6 已定义）。
+    自变量 X：EphB1 基因型（WT vs KO）；
+    中介变量 M：每条 curated EphB1 下游通路的样本级通路活性分数（M_score_RNA）；
+    结果变量 Y：membrane context 轴的样本级 score（Y_score_membrane_context）。
   control_logic: >
-    将 X 对 Y 的总效应分解为直接效应 c' 与经 M 传递的间接效应 a*b，判断 pathway 是否真实参与 EphB1→CL-axis 的链路。
+    首先估计 X 对 Y 的总效应 c_total（Y ~ X），
+    再将其分解为 X→M（a, M ~ X）与在控制 X 后 M→Y（b, Y ~ X+M 中 M 的系数）、
+    其中 a×b 即为中介的间接效应；若某条 pathway 真实参与 EphB1→membrane context 的因果链，
+    则应同时表现出显著的 a 与 b，且 a×b 与 Figure 6 所示瓶颈方向一致。
   core_justification: >
-    若某 pathway 是 EphB1 控制 CL metabolism 的关键环节，则必须同时满足：X→M（a）与 M→Y（b）均显著且方向一致。
+    相比单纯相关分析，三元中介框架可以定量回答“EphB1→通路→机制轴”中的哪一环在传递效应，
+    并允许区分直接效应（c'）与通过下游 signaling 模块传递的间接效应（a×b），
+    对于构建“EphB1–signal–membrane context”这一因果故事是必要的一步。
 
 # ---------- 3. Methods（差异性信息） ----------
 methods:
   inherits_from_protocol: "default_mediation_pipeline_CL_axes"
   biological_material: >
-    使用 WT 与 Ephb1−/− 巨噬细胞的整合 multi-omics 数据，
-    包括 RNA-seq derived pathway scores 与 lipid/RNA derived CL-axis scores。
+    使用 WT 与 Ephb1−/− 小鼠来源巨噬细胞的整合 multi-omics 数据，
+    RNA-seq 用于构建 EphB1 下游通路的 sample-level 活性分数，
+    脂质组学与 RNA 共同用于构建 Figure 6 中定义的 membrane context 轴 score。
   experimental_groups: >
-    仅基因型为自变量，不添加外源刺激；所有 mediator 与 outcome 以统一的 axis 定义（Figure 6）标准化。
-  stimuli_and_treatment: "无外源刺激，分析稳态差异。"
-  time_points: "单一稳态时间点。"
+    仅基因型为自变量（WT vs Ephb1−/−），不额外引入药物或刺激；
+    所有 mediator 与 outcome 在样本前处理与标准化上与 Figure 6–7B–7C 保持一致。
+  stimuli_and_treatment: "无外源刺激，分析稳态下 EphB1 缺失的长期效应。"
+  time_points: "单一稳态时间点（终点采样）。"
   dose_info: ""
   readout_and_assay: >
-    mediator 取自 curated downstream signaling modules（M1）或 upstream CL-axis regulatory pathways（M2），
-    outcome 为六大 axis score；通过 5000 次 bootstrap 估计 a、b、c、c' 与 ab。
+    mediator 输入为 sample_scores_for_mediation.tsv 中的 EphB1 下游通路 M_score_RNA 列，
+    outcome 为同一张表中的 membrane context_score 列；
+    使用脚本 06_mediation_analysis_minimal.R 对每一条 EphB1 下游通路分别拟合线性中介模型，
+    估计 a（M ~ X）、b（Y ~ X+M 中 M 的系数）、c_total（Y ~ X）与 c'（Y ~ X+M 中 X 的系数），
+    并进行 5000 次 bootstrap 以获得 a、b、ab 的经验分布。
   replicates: >
-    每组 4–5 生物学重复；M1/M2 分别使用相同的样本矩阵。
+    中介分析基于 batch1 中具有 RNA+脂质配对的样本（3 WT + 2 KO），
+    与 Figure 7 其它 panel 使用的样本集合完全一致。
   analysis_notes: >
-    间接效应 a*b 采用 percentile bootstrap CI；结果以 rank-significance 形式呈现，
-    并按机制轴方向校准（与 Figure 6 一致）。
+    间接效应 a×b 的不确定性通过 percentile bootstrap 置信区间描述，
+    同时计算 Sobel z 与 p_sobel 作为近似检验；
+    鉴于样本量很小，p 值主要用于方向和相对强度的参考，而非严格的显著性判决，
+    重点关注 bootstrap 均值与置信区间是否稳定偏离 0 以及各通路之间的相对排序。
   minimal_methods_summary: >
-    使用 WT/KO 的 multi-omics 机制轴得分进行因果中介分析，
-    分别以下游 signaling（M1）或 CL-axis upstream pathways（M2）为 mediator，
-    估计 EphB1 缺失对机制轴的直接与间接效应。
+    以基因型（WT vs KO）为 X、EphB1 下游通路活性分数为 M、membrane context 轴 score 为 Y，
+    应用线性中介分析和 bootstrap 估计 EphB1 缺失通过各条下游通路间接影响 membrane context 轴的效应大小与方向。
 
 # ---------- 4. Results：结构化描述 ----------
 results:
   data_direction: >
-    无论使用 M1 或 M2，多个 CL 机制轴（Synthesis、Supply、Membrane context）均呈明显负向间接效应，
-    表明 EphB1 缺失通过降低 pathway 活性间接导致机制轴下降。
+    在 membrane context 轴上，所有 EphB1 下游通路均呈现负向间接效应（ab_boot_mean < 0），
+    表明 EphB1 缺失通过全面削弱多条 signaling 模块，间接导致膜环境轴分数下降。
   stats_summary: >
-    M1 的 a*b 范围约 −20 至 0，M2 约 −15 至 0；bootstrap CI 多数不跨 0，
-    且 rank 前三的 axis 在两套 mediator 中部分重叠，方向一致。
+    9 条下游通路的 bootstrap 间接效应 ab_boot_mean 绝对值从中等到较大不等，
+    对应的 bootstrap 95% CI 均稳定落在 0 以下；
+    Sobel 检验的 z_sobel 和 p_sobel 与 bootstrap 结果方向一致，
+    在主效应通路上 p_sobel 提示间接效应显著偏离 0，而在效应较小的通路上 p_sobel 较大，
+    但方向始终为负，整体支持“多通路一致负向中介”的模式。
   key_numbers: >
-    M1 中 Synthesis 和 Membrane-context 轴的 ab 最显著（约 −15 至 −20）；
-    M2 中 Oxidation / Remodeling 的 ab 更集中（约 −8 至 −12）。
+    间接效应最强的通路包括：EphB1_PI3K_AKT_mTOR、EphB1_cytoskeleton_FAQ_Src_Rho、
+    EphB1_JAK_STAT_inflammatory 与 EphB1_NFkB_inflammation_ROS，它们的 ab_boot_mean 为整组中最负，
+    bootstrap 区间也最为收敛；其次为 AMPK_energy_sensing、integrin/caveolae_membrane_microdomain、
+    MAPK/ERK/p38/JNK 等通路，贡献中等幅度的负向中介效应；
+    末位通路（如 PGC1/NRF_mito_biogenesis 与 mito_stress_cell_death）ab_boot_mean 绝对值最小，
+    仍保持负向但效应量相对较弱，提示其在 membrane context 轴中的作用是“辅助性”的。
   group_difference_statement: >
-    结果表明 EphB1 缺失对多个 CL 机制轴的影响中，有可量化的比例是通过 signaling / transcriptomic pathways 传递的，
-    从而支持 Figure 7A–7C 所提出的因果链条。
+    这些下游通路的低活性（a > 0）、与其对 membrane context 轴瓶颈的正向促进关系（b < 0）共同决定了整体负向的 a×b，
+    说明 EphB1 缺失对 membrane context 轴的抑制主要由信号模块的共同下调介导。
   robustness_and_qc: >
-    M1 和 M2 虽来源不同但结论趋同，说明 EphB1 的下游与上游调控模块共同参与 CL-axis 瓶颈形成。
+    由于所有通路的 CI 均未跨 0，方向标签一致（以 a+,b− 为主），
+    说明中介作用模式具有高度稳健性，符合上游信号整体削弱的生物学预期。
   anomalies_or_limits: >
-    个别 axis（如 Synthesis）在 M1/M2 模型中的 rank 存在微调，可能反映 mediator 层的差异来源。
+    无明显矛盾通路，但末位通路（如 mito_stress/cell_death）效应量相对较小，
+    可能反映其在 membrane context 轴中的权重较低。
+    bar值较高，问题出在样本量太小
 
 # ---------- 5. Interpretation & Role in Chapter ----------
 interpretation:
   minimal_bio_interpretation: >
-    EphB1 缺失通过削弱其下游信号通路与 CL-axis 调控模块，部分中介了 CL synthesis/supply/membrane-context 的下降，
-    提供了机制瓶颈形成的因果证据。
+    EphB1 缺失通过一致性削弱多条下游 signaling 模块（PI3K–AKT–mTOR、Rho/FAK cytoskeleton、JAK–STAT、NFκB 等），
+    间接导致 membrane context 轴的全局下降，是 EphB1→膜稳态因果链条的关键证据。
   alternative_explanations: >
-    中介分析基于稳态数据，仍可能存在未测量的协变量；p 值与 CI 更适合作为方向性证据而非严格显著性检验。
-  summary_type: "supportive, exploratory"
+    所有通路均呈负向中介效应可能反映网络层级的协同调控，但仍需排除未观测到的共变因素；
+    bootstrap 的方向一致性说明该结构具有较高可靠性。
+  summary_type: "supportive, mechanistic"
   claim_supported: >
-    EphB1→regulatory pathway→CL-axis 的因果链条在统计上得到支持，
-    是解释 Figure 6 所见 CL 机制瓶颈的关键路径。
+    结果支持“EphB1 → 下游信号 → Membrane context 轴下降”的因果通路，其中 PI3K/AKT/mTOR 与 cytoskeleton/FAK/Src 为最主要的中介节点。
   link_to_previous: >
-    在确认 pathway 与 axis 在方向和相关性上高度一致（Figure 7B–7C）之后，
-    本节进一步证明这种一致性可部分解释 EphB1 缺失对机制轴的影响。
+    结合 7B–7C 中的通路抑制模式，本节量化证明这些下游信号模块不仅被抑制，
+    且其抑制量能够解释 membrane context 轴分数下降的显著比例。
   transition_to_next: >
-    下一节（7E）将检验这些中介链条是否最终体现为真实的脂质与炎症终点 readout。
-
+    下一节将进一步整合各机制轴与炎症终点，以确认 EphB1 信号衰减如何最终影响细胞命运与炎症输出。
 # ---------- 6. AI Writing Hints ----------
 ai_hints:
   target_section: ["Results", "Discussion_mini", "Methods_diff"]

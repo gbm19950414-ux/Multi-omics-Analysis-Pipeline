@@ -1,0 +1,85 @@
+# ============================================================
+# schema.yaml v2  ——  单个 panel 的结构化写作模版
+# 目标：让 AI 在几乎不需要补充信息的前提下，生成：
+#   - 结果段（Results）
+#   - 简短讨论/过渡段（Mini Discussion / Transition）
+#   - Methods 中本实验的“差异性信息”
+# ============================================================
+
+# ---------- 0. Meta & Assets：基本信息 ----------
+meta:
+  figure: "Figure 7"
+  panel: "E"
+  short_title: "EphB1 → membrane context 轴：c 与 c' 的竞争中介结构"
+  chapter: "7. 下游信号通路与机制轴的因果解析"
+  experiment_id: "2025-03_mediation_membrane_context_axis"
+  version: 1
+
+assets:
+  main_figure_file: "results/figs/figure_7_e.pdf"
+  raw_data_files:
+    - "results/multiomics/tables/mediation/mediation_figure7D_membrane_axis_eph_downstream.tsv"
+  stats_files:
+    - "results/multiomics/tables/mediation/mediation_figure7D_membrane_axis_eph_downstream.tsv"
+  analysis_scripts:
+    - "scripts/multi/figure_7_e_mediation_membrane_context_c_vs_cprime.R"
+  supplementary_items:
+    - ""
+
+# ---------- 1. Scientific Question：本节要回答什么 ----------
+question:
+  context_from_previous: "前一节（7D）显示所有 EphB1 下游通路均对 membrane context 轴产生负向间接效应。"
+  core_question: "这些通路是否能显著削弱 EphB1 缺失对 membrane context 轴的总效应？"
+  hypothesis_or_expectation: "若某条通路是主要中介，则加入该通路后 c' 应显著低于 c，甚至接近于 0。"
+  importance_reason: "区分‘单一关键中介’与‘多通路协同弱中介’对机制建模至关重要。"
+
+# ---------- 2. Rationale / Design Logic：为什么这样设计 ----------
+rationale:
+  model_and_system: "采用线性中介模型 Y~X 与 Y~X+M，比较 EphB1 基因型对 membrane context 轴的总效应与加入单条下游通路后的直接效应。"
+  key_variables: "X 为基因型（WT=0, KO=1），M 为各条 EphB1 下游通路的 RNA 通路分数，Y 为 membrane context 轴 score。"
+  control_logic: "若某条通路承担主要中介作用，则加入该 M 后 X→Y 的系数（c'）应明显小于总效应（c）。"
+  core_justification: "c 与 c' 的对比可揭示 EphB1 影响 membrane context 轴时，是否存在单条主导通路。"
+
+# ---------- 3. Methods（差异性信息）：只写本 panel 特有的 ----------
+methods:
+  inherits_from_protocol: "default_mediation_pipeline_CL_axes"
+  biological_material: "batch1 中具备 RNA+lipid 配对的 WT 与 Ephb1−/− 原代腹腔巨噬细胞（n=5）。"
+  experimental_groups: "基因型作为自变量（WT vs KO），无额外处理或刺激。"
+  stimuli_and_treatment: "无外源刺激，稳态条件。"
+  time_points: "单一终点采样。"
+  dose_info: ""
+  readout_and_assay: "mediator 为各条 EphB1 下游通路的 RNA M_score_RNA；outcome 为 membrane context 轴分数；使用线性模型比较 c_total 与 c_prime。"
+  replicates: "分析基于 3 WT + 2 KO 的配对组学样本。"
+  analysis_notes: "优先使用 bootstrap 的 c/c'（如存在），否则使用线性估计与 Wald CI。"
+  minimal_methods_summary: "利用线性中介模型比较 EphB1 缺失对 membrane context 轴的总效应与控制单条下游通路后的直接效应，以判断是否存在主导中介者。"
+
+# ---------- 4. Results：把图变成结构化文字 ----------
+results:
+  data_direction: "所有通路的总效应 c（Y~X）均为正，控制任意单条通路后得到的直接效应 c' 亦保持为正且通常更大。"
+  stats_summary: "c 与 c' 的 95% CI 全部位于 0 右侧；未检测到使 c' 接近 0 的通路，提示不存在单一主导中介者。"
+  key_numbers: "所有通路 c_total≈0.16；c' 在各通路下上升至约 0.25–0.60 区间。c'/c>1 表明直接效应大于总效应，符合竞争中介结构。"
+  group_difference_statement: "EphB1 缺失对 membrane context 轴具有正向的直接效应，而所有下游通路提供负向间接效应，但不足以抵消直接效应。"
+  robustness_and_qc: "各通路 c' 的方向一致，排序稳定，无明显 outlier。"
+  anomalies_or_limits: "样本量较小（n=5），bootstrap CI 相对宽，但 c/c' 的方向性稳定一致。"
+
+# ---------- 5. Interpretation & Role in Chapter：怎么理解 + 在整章中的作用 ----------
+interpretation:
+  minimal_bio_interpretation: "EphB1 缺失对 membrane context 轴的影响由一个更强的正向直接效应与多条负向间接效应共同决定，形成竞争中介结构。"
+  alternative_explanations: "负向间接效应可能来自多个抑制性或补偿性 signaling 模块叠加；c' 偏大也可能反映未被模型捕获的其他上游调控因子。"
+  summary_type: "supportive, exploratory"
+  claim_supported: "EphB1 影响 membrane context 轴并非通过单个主导通路，而是存在多通路协同弱中介结构。"
+  link_to_previous: "在 7D 中确认多条通路具有一致负向间接效应后，本节进一步显示这些通路不足以单独解释 EphB1 的总体效应。"
+  transition_to_next: "下一节将整合各机制轴与炎症输出，构建 EphB1 信号衰减的整体系因果框架。"
+
+# ---------- 6. AI Writing Hints（可选）：给 LLM 的写作风格提示 ----------
+ai_hints:
+  target_section: ["Results", "Discussion_mini", "Methods_diff"] 
+    # 你希望从这个 schema 主要生成哪些部分的正文？
+    # 可选值： "Results" / "Discussion_mini" / "Methods_diff"
+  tone: "neutral"     
+    # 写作语气： "neutral"（默认科研语气）/ "cautious"（更谨慎）/ "confident"（偏肯定）
+  target_journal_style: "" 
+    # 若有心仪期刊的写作风格，可以在此填入名称，仅作为“风格参考”
+    # 例如："Cell Metabolism", "Nature Immunology"
+  language: "zh_en_mix"
+    # 你希望生成何种语言： "zh"（中文）/ "en"（英文）/ "zh_en_mix"（中英混排方便你润色）

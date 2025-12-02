@@ -81,7 +81,10 @@ med <- readr::read_tsv(infile, show_col_types = FALSE)
 ## 简单检查一些关键列是否存在
 needed_cols <- c(
   "mediator_col", "outcome_col",
-  "ab", "ab_boot_mean", "ab_boot_ci_low", "ab_boot_ci_high",
+  "ab",
+  "ab_boot_mean", "ab_boot_ci_low", "ab_boot_ci_high",
+  "a_boot_mean",  "a_boot_ci_low",  "a_boot_ci_high",
+  "b_boot_mean",  "b_boot_ci_low",  "b_boot_ci_high",
   "z_sobel", "p_sobel",
   "c_total", "p_c_total"
 )
@@ -174,7 +177,9 @@ pick_top_per_Y_axis <- function(df, label_M_type) {
       c_prime, se_c_prime, p_c_prime,
       ## 中介效应
       ab,
-      ab_boot_mean, ab_boot_ci_low, ab_boot_ci_high,
+      ab_boot_mean,  ab_boot_ci_low,  ab_boot_ci_high,
+      a_boot_mean,   a_boot_ci_low,   a_boot_ci_high,
+      b_boot_mean,   b_boot_ci_low,   b_boot_ci_high,
       z_sobel, p_sobel
     ) %>%
     arrange(Y_axis)
@@ -203,6 +208,73 @@ readr::write_tsv(top_M2, out_M2)
 
 cat("  [OK] M1 精简表: ", out_M1, "\n", sep = "")
 cat("  [OK] M2 精简表: ", out_M2, "\n", sep = "")
+## ---------------- 6. 为 Figure 7D 准备 membrane context 轴的 Eph 下游通路子集 -----
+##
+## 输出：
+##   mediation_figure7D_membrane_axis_eph_downstream.tsv
+##
+##   每一行 = 一个 EphB1 下游通路 (mediator_col)，
+##   且 outcome_col 固定为 "Membrane context_score"。
+##
+##   除了原有的 a/b/c/c'、ab、Sobel 结果外，
+##   现在还额外包含：
+##     - a_boot_mean / a_boot_ci_low / a_boot_ci_high
+##     - b_boot_mean / b_boot_ci_low / b_boot_ci_high
+##   方便在 Figure 7D 中直接使用 bootstrap 的 a/b 估计与区间。
+##
+cat("[STEP6] 为 Figure 7D 准备 membrane context 轴的 EphB1 下游通路数据...\n")
+
+fig7d_mem <- med2 %>%
+  # 1）只保留 EphB1 下游通路（M1） + membrane context 这一条轴
+  filter(
+    M_type == "M1_ephb1_downstream_or_other",
+    Y_axis == "Membrane context",
+    !is.na(ab_boot_mean)
+  ) %>%
+  # 2）给 a、b 方向做一个标签，方便 Figure 7D 画在点旁边
+  mutate(
+    label_ab = dplyr::case_when(
+      a > 0 & b > 0 ~ "a+, b+",
+      a > 0 & b < 0 ~ "a+, b-",
+      a < 0 & b > 0 ~ "a-, b+",
+      a < 0 & b < 0 ~ "a-, b-",
+      TRUE          ~ ""
+    ),
+    sobel_log10p = -log10(p_sobel)
+  ) %>%
+  # 3）按“间接效应绝对值 + p_sobel”排序，方便画图时从上到下是“更重要 → 次要”
+  arrange(
+    dplyr::desc(abs(ab_boot_mean)),
+    p_sobel
+  ) %>%
+  # 4）显式选择需要在 Figure 7D TSV 中保留的列，包括 a/b 的 bootstrap信息
+  dplyr::select(
+    Y_axis,
+    outcome_col,
+    M_type,
+    M_axis,
+    mediator_col,
+    n,
+    group_ref,
+    group_focal,
+    a, se_a, p_a,
+    b, se_b, p_b,
+    c_total, se_c_total, p_c_total,
+    c_prime, se_c_prime, p_c_prime,
+    ab,
+    ab_boot_mean,  ab_boot_ci_low,  ab_boot_ci_high,
+    a_boot_mean,   a_boot_ci_low,   a_boot_ci_high,
+    b_boot_mean,   b_boot_ci_low,   b_boot_ci_high,
+    z_sobel, p_sobel, sobel_log10p,
+    label_ab
+  )
+
+out_7d <- file.path(outdir,
+                    "mediation_figure7D_membrane_axis_eph_downstream.tsv")
+
+readr::write_tsv(fig7d_mem, out_7d)
+
+cat("  [OK] Figure 7D 数据表: ", out_7d, "\n", sep = "")
 cat("============================================================\n")
 cat("[DONE] 筛选“每轴最有希望的中介组合”完成。\n")
 cat("  若需每个轴保留多条候选，请修改函数 pick_top_per_Y_axis 中的 slice_head(n = 1)。\n")
