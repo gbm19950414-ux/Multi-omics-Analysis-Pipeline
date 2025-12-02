@@ -24,9 +24,9 @@ concept_goal:
 mechanism:
   key_nodes:
     - name: "Mitochondrion"
-      description: "心磷脂（CL）合成、重塑和氧化的主要场所，是5条轴的中心背景结构。"
+      description: "心磷脂（CL）合成、重塑和氧化的主要场所，是6条轴的中心背景结构。"
     - name: "ER"
-      description: "提供磷脂酸（PA）和磷脂酰甘油（PG）的内质网库，作为 CL 合成的前体来源。"
+      description: "提供磷脂酸（PA）的内质网库，作为 CL 合成的前体来源。"
 
     - name: "CL"
       description: "线粒体特异性磷脂，是5条轴的汇聚中心，也是重塑与氧化反应的起点。"
@@ -76,7 +76,7 @@ mechanism:
 evidence_mapping:
   supported_links:          # 哪些机制步骤是“有数据支持”的？
     - mechanism_step: ""    # 如 “EphB1 → mtROS（inhibition）”
-      supported_by: ["Fig3A", "Fig3B", "Fig4A"]
+      supported_by: []
       confidence: "high|medium|low"
   speculative_links:        # 哪些步骤是推断（discussion中的）？
     - mechanism_step: ""
@@ -103,17 +103,19 @@ visual_logic:
 
 # ---------- 5. Message Strength & Boundaries（力度与边界） ----------
 interpretation:
-  what_is_certain: "心磷脂的生物合成、重塑、跨膜/跨细胞器转运以及氧化损伤涉及不同基因模块和脂质 readout；这些模块可以在概念上拆分为四条代谢/功能轴，并与转录组和脂质组指标一一对应。"       # 明确写出“本文章中有数据支持的部分”
+  what_is_certain: "心磷脂的生物合成、重塑、跨膜/跨细胞器转运以及氧化损伤涉及不同基因模块和脂质 readout；这些模块可以在概念上拆分为6条代谢/功能轴，并与转录组和脂质组指标一一对应。"       # 明确写出“本文章中有数据支持的部分”
   what_is_plausible: "通过为每条轴构建加权的基因集和脂质 readout，并计算方向性 Z 分数，可以在轴层面上定量描述 Ephb1 缺失对心磷脂代谢网络的综合影响。"     # 逻辑推断但未直接测试的部分
-  what_is_unknown: "    各轴之间是否存在显著的功能耦联或补偿（例如合成轴受抑时重塑轴是否上调）仍未被系统性实验验证；
-    不同组织或刺激条件下，这四条轴的权重是否改变也有待后续研究。"       # 模型中仍未被实验解决的问题（常用于 Discussion）
+  what_is_unknown: > # 模型中仍未被实验解决的问题（常用于 Discussion）
+    各轴之间是否存在显著的功能耦联或补偿（例如合成轴受抑时重塑轴是否上调）仍未被系统性实验验证；
+    不同组织或刺激条件下，这6条轴的权重是否改变也有待后续研究。
+    由于脂质组学检测未进行细胞级分，因此未能从脂质组学层面量化心磷脂的外翻过程，该过程也是心磷脂代谢的关键功能轴之一。
   why_model_needed: "     多组学数据维度高且分散，直接解读困难；
-    将 CL 代谢组织成四条机制轴，可以为后续的 Ephb1 依赖性变化提供清晰、可解释的坐标系，
+    将 CL 代谢组织成6条机制轴，可以为后续的 Ephb1 依赖性变化提供清晰、可解释的坐标系，
     也是整篇文章从“观测差异”上升到“机制层面整合”的关键一步。"      # 这张图为何有助于读者理解整章逻辑？
 
 # ---------- 6. Transition（图在正文中的作用） ----------
 transition:
-  how_it_summarizes_previous: "    在前几章中，我们分别从脂质组和转录组角度观察到 Ephb1 缺失影响 CL 含量。
+  how_it_summarizes_previous: "    在前几章中，我们分别从脂质组和转录组角度观察到 Ephb1 缺失影响 CL 可及性。
     本图将这个过程放到统一的 ER–线粒体 CL 代谢框架中。"   # 这张图如何总结前面所有实验？
   how_it_leads_next_section: "    在此概念轴框架基础上，接下来的表格将提供所有该机制图中省略的关键基因与脂质读数。"    # 若之后有新章节，图如何作为桥？
 

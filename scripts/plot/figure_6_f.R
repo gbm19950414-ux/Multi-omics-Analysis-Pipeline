@@ -20,6 +20,7 @@ suppressPackageStartupMessages({
   library(stringr)
   library(ggplot2)
   library(broom)
+  library(patchwork)
 })
 
 ## ---------------- 1. 读取命令行参数 & 配置 ------------------
@@ -83,8 +84,8 @@ expected_dir   <- get_cfg(cfg, "expected_direction", default = list())
 out_pdf <- get_cfg(cfg, "output", "pdf", default = "results/figs/figure_6_f.pdf")
 out_png <- get_cfg(cfg, "output", "png", default = "results/figs/figure_6_f.png")
 out_stats_tsv <- get_cfg(cfg, "output", "stats_tsv", default = NULL)
-out_full_pdf <- get_cfg(cfg, "output", "full_pdf", default = NULL)
-out_full_png <- get_cfg(cfg, "output", "full_png", default = NULL)
+out_full_pdf <- get_cfg(cfg, "output", "full_pdf", default = "results/figs/figure_6_f_full/figure_6_f_full.pdf")
+out_full_png <- get_cfg(cfg, "output", "full_png", default = "results/figs/figure_6_f_full/figure_6_f_full.png")
 
 layout_nrow <- get_cfg(cfg, "layout", "nrow", default = NULL)
 layout_ncol <- get_cfg(cfg, "layout", "ncol", default = NULL)
@@ -94,6 +95,11 @@ transform_y_mode <- get_cfg(cfg, "transform_y", "mode", default = "none")
 
 width_cfg  <- get_cfg(cfg, "plot_size", "width",  default = 8)
 height_cfg <- get_cfg(cfg, "plot_size", "height", default = 6)
+
+# full 图（每个 phenotype 单独图）的尺寸，可以单独配置；
+# 默认比主图更窄一些，便于论文版面排版（例如单栏图）。
+full_width_cfg  <- get_cfg(cfg, "plot_size", "full_width",  default = width_cfg / 2)
+full_height_cfg <- get_cfg(cfg, "plot_size", "full_height", default = height_cfg)
 
 ## ---------------- 2. 读取数据表 -----------------------------
 
@@ -385,54 +391,89 @@ if (!is.null(transform_y_mode) && identical(transform_y_mode, "z_by_indicator"))
 
 ## ---------------- 11. 画图 -----------------------------------
 
-## 如配置要求，先输出“全轴全指标”补充图（使用原始 diff_HO_WT 作为 y）
+## 如配置要求，先输出“全轴全指标”补充图：
+## 方案 A（更新版）：每个 phenotype 单独一张图，分别保存到 results/figs/figure_6_f_full/ 目录下
 if (!is.null(out_full_pdf) || !is.null(out_full_png)) {
-  p_full <- ggplot(full_plot_data, aes(x = combined_z, y = .data[[y_var_full]])) +
-    geom_point() +
-    geom_smooth(
-      method = "lm",
-      se = TRUE,
-      aes(color = dir_match),
-      show.legend = TRUE
-    ) +
-    facet_grid(axis ~ phenotype, scales = "free") +
-    geom_text(
-      data = stats_df_all,
-      aes(
-        x = -Inf, y = Inf,
-        label = label
-      ),
-      hjust = -0.1, vjust = 1.1,
-      inherit.aes = FALSE,
-      size = 3
-    ) +
-    scale_color_manual(
-      values = c(
-        match    = "red",
-        mismatch = "grey40",
-        unknown  = "black"
-      )
-    ) +
-    labs(
-      x = "Multi-omics mechanistic axis effect (HO vs WT, combined Z)",
-      y = y_lab_full,
-      color = "Direction match"
-    ) +
-    theme_bw() +
-    theme(
-      strip.background = element_rect(fill = "grey90"),
-      panel.grid = element_line(size = 0.2),
-      legend.position = "bottom"
-    )
 
+  # 按 phenotype 拆分数据，生成每个 phenotype 的 ggplot 对象
+  full_plots_list <- full_plot_data %>%
+    split(.$phenotype) %>%
+    purrr::imap(function(df, pheno_name) {
+      # 对应 phenotype 的统计结果（r, p, slope 等）
+      stats_sub <- stats_df_all %>%
+        dplyr::filter(phenotype == pheno_name)
+
+      ggplot(df, aes(x = combined_z, y = .data[[y_var_full]])) +
+        geom_point() +
+        geom_smooth(
+          method = "lm",
+          se = TRUE,
+          aes(color = dir_match),
+          show.legend = TRUE
+        ) +
+        facet_grid(axis ~ ., scales = "free") +
+        geom_text(
+          data = stats_sub,
+          aes(
+            x = -Inf, y = Inf,
+            label = label
+          ),
+          hjust = -0.1, vjust = 1.1,
+          inherit.aes = FALSE,
+          size = 3
+        ) +
+        scale_color_manual(
+          values = c(
+            match    = "red",
+            mismatch = "grey40",
+            unknown  = "black"
+          )
+        ) +
+        labs(
+          title = pheno_name,
+          x = "Multi-omics mechanistic axis effect (HO vs WT, combined Z)",
+          y = y_lab_full,
+          color = "Direction match"
+        ) +
+        theme_bw() +
+        theme(
+          strip.background = element_rect(fill = "grey90"),
+          panel.grid = element_line(size = 0.2),
+          legend.position = "bottom"
+        )
+    })
+
+  # 目标输出目录：优先使用 out_full_pdf/out_full_png 的目录，否则默认 results/figs/figure_6_f_full
+  out_full_dir <- NULL
   if (!is.null(out_full_pdf)) {
-    dir.create(dirname(out_full_pdf), showWarnings = FALSE, recursive = TRUE)
-    ggsave(out_full_pdf, p_full, width = width_cfg, height = height_cfg, units = "in")
+    out_full_dir <- dirname(out_full_pdf)
+  } else if (!is.null(out_full_png)) {
+    out_full_dir <- dirname(out_full_png)
+  } else {
+    out_full_dir <- "results/figs/figure_6_f_full"
   }
-  if (!is.null(out_full_png)) {
-    dir.create(dirname(out_full_png), showWarnings = FALSE, recursive = TRUE)
-    ggsave(out_full_png, p_full, width = width_cfg, height = height_cfg, units = "in", dpi = 300)
-  }
+  dir.create(out_full_dir, showWarnings = FALSE, recursive = TRUE)
+
+  # 逐个 phenotype 保存单独文件
+  pheno_names <- names(full_plots_list)
+  purrr::iwalk(full_plots_list, function(p_single, pheno_name) {
+    # 将 phenotype 名字中的特殊字符替换为下划线，防止文件名非法
+    pheno_safe <- stringr::str_replace_all(pheno_name, "[^A-Za-z0-9_]+", "_")
+    file_base <- file.path(out_full_dir, paste0("figure_6_f_full_", pheno_safe))
+
+    if (!is.null(out_full_pdf)) {
+      ggsave(paste0(file_base, ".pdf"), p_single,
+             width  = full_width_cfg,
+             height = full_height_cfg,
+             units  = "in")
+    }
+    if (!is.null(out_full_png)) {
+      ggsave(paste0(file_base, ".png"), p_single,
+             width  = full_width_cfg,
+             height = full_height_cfg,
+             units  = "in", dpi = 300)
+    }
+  })
 }
 
 ## 设置 factor 顺序（可按需要调整）

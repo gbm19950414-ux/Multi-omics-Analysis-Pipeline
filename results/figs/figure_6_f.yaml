@@ -45,7 +45,7 @@ rationale:
                              # 例如：“操纵基因型（WT vs Ephb1−/−）和刺激条件（LPS 预处理 + ATP/Nigericin 激活）。”
   control_logic: "跨批次差值可减少实验噪声，并凸显 HO 特异性的方向性变化。"          # 对照设置背后的逻辑（为什么这些对照足以回答问题）
                              # 例如：“未刺激组用于定义基线 IL-1β 水平，WT 作为 Ephb1−/− 的参照组。”
-  core_justification: "若某轴主导 HO 的 CL 重塑，则不同批次中该轴的 Z 分数应与 CL 表型一致变化。"     # 最关键的一句“设计理由”（可直接当自动摘要用）
+  core_justification: "若某轴主导 HO 的 CL 含量变化，则不同批次中该轴的 Z 分数应与 CL 表型一致变化。"     # 最关键的一句“设计理由”（可直接当自动摘要用）
                              # 例如：“如果 EphB1 促进炎性小体效应端活性，则 Ephb1−/− 细胞在相同刺激下应释放更少 IL-1β。”
 
 # ---------- 3. Methods（差异性信息）：只写本 panel 特有的 ----------
@@ -71,81 +71,95 @@ methods:
 # ---------- 4. Results：把图变成结构化文字 ----------
 results:
   data_direction: >
-    以批次为单位，将每条机制轴的 combined Z（HO−WT）与预先挑选的 CL panel 指标 HO−WT 差值做回归。
-    Membrane context 轴中，CL_fraction 在 batch1 略低于 WT（diff_HO_WT = −0.00166），在 batch2 与 batch3 略高于 WT（分别为 +0.00007 和 +0.00018），batch4 差值为 0，
-    四个批次整体与轴效应呈较强负相关（r = −0.928，n = 4）。同一轴下的 mito_lipid_mass 在所有批次均低于 WT（diff_HO_WT 分别为 −5.75×10⁹、−6.38×10¹⁰、−4.06×10¹⁰、−2.32×10⁸），
-    随 Membrane context 轴 Z 分数升高呈中等强度正相关（r = 0.702，n = 4）。
-    Oxidation 轴中，oxCL_CL_ratio 在四个批次中均为 0（HO 与 WT 均未检测到氧化 CL），因此回归的相关系数与 p 值不可定义（r = NA，p = NA，n = 4）。
-    Remodeling 轴中，MLCL_CL_ratio 在 batch2 和 batch4 略高于 WT（diff_HO_WT = +0.119 和 +0.00088），在 batch3 略低于 WT（−0.018），batch1 为 0，
-    跨批次整体呈轻度负相关（r = −0.482，n = 4）。
-    Supply 轴中，sum_PA 在 batch1 与 batch2 略低于 WT（−3.40×10⁶ 和 −1.48×10⁷），在 batch3 明显高于 WT（+1.59×10⁸），batch4 为 0，
-    跨批次整体相关性较弱且方向不稳定（r = −0.333，n = 4）。
-    Synthesis 轴中，CL_PG_ratio 在 batch1 略低于 WT（−0.0114），在 batch2 与 batch3 略高于 WT（+0.00286 和 +0.00538），batch4 因数值为 Inf 无法纳入分析，
-    3 个有效批次之间呈轻度负相关（r = −0.434，n = 3）。
-    Transport 轴中，PA_CL_mismatch 在 batch1 与 batch3 为正值（+1.34 和 +0.50），在 batch2 为负值（−1.19），
-    PA_PG_mismatch 在 batch1 与 batch3 为明显正值（+1.62 和 +1.16），batch2 接近 0（−0.083），
-    两个 mismatch 指标与 Transport 轴 Z 分数在 3 个批次内均呈较强正相关（PA_CL_mismatch r = 0.862，PA_PG_mismatch r = 0.894，n = 3）。
+    以批次为单位，将每条机制轴的 combined Z（HO−WT）与 sum_CL 的 HO−WT 差值做回归，
+    直接检验多组学轴效应能否在总量层面预测心磷脂丰度的变化。
+    在 Membrane context 轴上，sum_CL 的 HO−WT 差值随轴 Z 分数升高整体呈下降趋势，
+    回归斜率约为 −6.67×10⁸（n = 4），相关系数 r ≈ −0.97，提示在跨批次层面总 CL 量在膜环境受扰更严重的 HO 中整体略有下降。
+    Oxidation 轴中，sum_CL 与轴效应几乎不相关（斜率约 6.82×10⁷，r ≈ 0.09，p ≈ 0.91，n = 4），
+    暗示氧化轴更多反映 CL 质量/修饰状态而非总量变化。
+    Remodeling 轴中，sum_CL 随轴 Z 分数升高略有下降（斜率约 −3.21×10⁸，r ≈ −0.18，p ≈ 0.82，n = 4），
+    但相关性较弱，批次间点位主要围绕 0 轻度波动。
+    Supply 轴中，sum_CL 与轴效应几乎完全脱耦（斜率约 3.32×10⁵，r ≈ 0.00，p ≈ 1.00，n = 4），
+    说明在当前数据集中，底物供应轴所捕捉的变化很难转化为跨批次可见的总 CL 量差异。
+    Synthesis 轴中，sum_CL 与轴效应呈轻度负相关（斜率约 −4.46×10⁸，r ≈ −0.37，p ≈ 0.63，n = 4），
+    方向上暗示 HO 中“合成轴越偏离 WT，总 CL 越低”，但统计上并不显著。
+    Transport 轴中，仅有 3 个批次的数据点可用于回归，sum_CL 随轴效应升高略有下降（斜率约 −1.16×10⁸，r ≈ −0.29，p ≈ 0.81，n = 3），
+    整体趋势同样较弱。
   stats_summary: >
-    对每一条轴 × 表型组合进行线性回归，Membrane context/CL_fraction 的斜率为 −1.01×10⁻³（r = −0.928，p = 0.072，n = 4），
-    Membrane context/mito_lipid_mass 的斜率为 2.63×10¹⁰（r = 0.702，p = 0.298，n = 4）。
-    Oxidation/oxCL_CL_ratio 因四个批次 diff_HO_WT 全为 0，斜率与相关系数均为 NA。
-    Remodeling/MLCL_CL_ratio 的斜率为 −9.63×10⁻²（r = −0.482，p = 0.518，n = 4）。
-    Supply/sum_PA 的斜率为 −4.22×10⁷（r = −0.333，p = 0.667，n = 4）。
-    Synthesis/CL_PG_ratio 的斜率为 −8.25×10⁻³（r = −0.434，p = 0.714，n = 3）。
-    Transport/PA_CL_mismatch 与 Transport/PA_PG_mismatch 的斜率分别为 0.653 和 0.461，
-    对应相关系数 r = 0.862（p = 0.339，n = 3）与 r = 0.894（p = 0.296，n = 3）。
+    对 sum_CL 的 HO−WT 差值与各机制轴 combined Z（HO−WT）进行线性回归，
+    Membrane context/sum_CL 的斜率为 −6.67×10⁸（r = −0.97，p = 0.035，n = 4），
+    是所有轴中相关性绝对值最高的一对组合。
+    Oxidation/sum_CL 的斜率为 6.82×10⁷（r = 0.09，p = 0.912，n = 4），几乎无相关；
+    Remodeling/sum_CL 的斜率为 −3.21×10⁸（r = −0.18，p = 0.817，n = 4），
+    Supply/sum_CL 的斜率为 3.32×10⁵（r = 0.00，p = 0.9996，n = 4），
+    Synthesis/sum_CL 的斜率为 −4.46×10⁸（r = −0.37，p = 0.625，n = 4）。
+    Transport/sum_CL 的数据点数较少（n = 3），斜率为 −1.16×10⁸（r = −0.29，p = 0.811，n = 3），
+    整体相关性较弱。
   key_numbers: >
-    Membrane context/CL_fraction: n = 4，slope = −1.01×10⁻³，r = −0.928，p = 0.0715；
-    Membrane context/mito_lipid_mass: n = 4，slope = 2.63×10¹⁰，r = 0.702，p = 0.2977。
-    Oxidation/oxCL_CL_ratio: n = 4，diff_HO_WT 全为 0，r = NA，p = NA。
-    Remodeling/MLCL_CL_ratio: n = 4，slope = −9.63×10⁻²，r = −0.482，p = 0.5177。
-    Supply/sum_PA: n = 4，slope = −4.22×10⁷，r = −0.333，p = 0.6665。
-    Synthesis/CL_PG_ratio: 有效 n = 3（batch4 为 Inf 被排除），slope = −8.25×10⁻³，r = −0.434，p = 0.7144。
-    Transport/PA_CL_mismatch: n = 3，slope = 0.653，r = 0.862，p = 0.3387；
-    Transport/PA_PG_mismatch: n = 3，slope = 0.461，r = 0.894，p = 0.2957。
+    Membrane context/sum_CL: n = 4，slope = −6.67×10⁸，r = −0.97，p = 0.035；
+    Oxidation/sum_CL: n = 4，slope = 6.82×10⁷，r = 0.09，p = 0.912；
+    Remodeling/sum_CL: n = 4，slope = −3.21×10⁸，r = −0.18，p = 0.817；
+    Supply/sum_CL: n = 4，slope = 3.32×10⁵，r = 0.00，p = 0.9996；
+    Synthesis/sum_CL: n = 4，slope = −4.46×10⁸，r = −0.37，p = 0.625；
+    Transport/sum_CL: n = 3，slope = −1.16×10⁸，r = −0.29，p = 0.811。
   group_difference_statement: >
-    总体而言，Membrane context 轴的 CL_fraction 在一个批次中明显低于 WT 而在其他批次接近 0 差异，
-    mito_lipid_mass 在所有批次中均低于 WT；Remodeling 轴下的 MLCL_CL_ratio 在不同批次间围绕 0 轻微波动；
-    Supply 轴的 sum_PA 在前三个批次间跨越负到正的较大区间；
-    Synthesis 轴的 CL_PG_ratio 在少数批次中略有上升或下降；
-    Transport 轴的 mismatch 指标在多个批次中对 HO 显著偏正（diff_HO_WT > 0），提示 HO 相对 WT 的 PA 与 CL/PG 匹配程度整体更差。
+    总体来看，sum_CL 的 HO−WT 差值在各机制轴和批次之间大多围绕 0 波动，
+    绝对值主要落在 10⁸–10⁹ 的量级，未出现“所有批次 HO 显著高于或显著低于 WT”的单向模式。
+    在 Membrane context、Remodeling、Synthesis 与 Transport 轴上，回归斜率均为负值，
+    提示在这些轴上 HO 的轴效应越偏离 WT，总 CL 量整体更倾向于降低；
+    而 Oxidation 与 Supply 轴的斜率接近 0 或略微为正，说明在当前数据集中，氧化与底物供应的综合轴效应
+    很难在总量层面拉开 HO 与 WT 的差距。
   robustness_and_qc: >
-    每个轴 × 表型组合的批次数有限（多数为 n = 4，Transport 相关指标为 n = 3），
-    且部分指标（如 CL_PG_ratio 的 batch4、oxCL_CL_ratio 全部批次）存在 Inf 或全 0 值，
-    导致某些组合的 r 与 p 无法可靠估计或被迫排除。
-    回归分析未发现明显的极端离群点，但由于样本量小，斜率与相关系数的置信度有限。
+    绝大多数轴 × 表型组合仅包含 4 个批次（Transport 轴为 3 个批次），
+    在如此小样本量下，即便 Membrane context/sum_CL 的 r 接近 −0.97，p 值也仅达到约 0.035，
+    其余轴的 p 值均明显大于 0.6，提示统计置信度有限。
+    回归残差未见异常极端离群点，但由于 sum_CL 的跨批次变化幅度本身较小，
+    线性模型对斜率的估计容易受到单个批次波动的影响；
+    此外，Transport 轴缺失一个批次的数据，使得该轴的相关系数与斜率更加不稳定，应谨慎解读。
   anomalies_or_limits: >
-    Oxidation/oxCL_CL_ratio 的 HO−WT 差值在所有批次均为 0，提示在当前实验条件下几乎未检测到可量化的氧化 CL，
-    该轴的“氧化表型”主要由其他指标承担。
-    Synthesis/CL_PG_ratio 在 batch4 中出现 Inf，反映该批次底物极低或数值异常，导致该点无法纳入回归。
-    Transport mismatch 指标虽然在 3 个批次中显示出较高的相关系数（r 接近 0.9），但由于 n 较小且 p 值>0.29，
-    这些趋势应被视为探索性而非严格显著。
+    与前一部分分析的 CL_PG_ratio、MLCL_CL_ratio 或 PA mismatch 不同，sum_CL 作为总量 readout 的动态范围有限，
+    在一些批次中 HO−WT 差值接近 0，这本身限制了回归分析的分辨率，
+    也使得即便相关系数在个别组合（如 Membrane context/sum_CL）中较高，其生物学意义仍需谨慎评估。
+    此外，当前回归仅基于 3–4 个批次的数据，尚无法排除批次性技术噪声或未记录协变量
+    对斜率和相关系数的影响，因此这些结果更适合作为探索性线索，而非严格的定量验证。
 
 # ---------- 5. Interpretation & Role in Chapter：怎么理解 + 在整章中的作用 ----------
 interpretation:
   minimal_bio_interpretation: >
-    在本图中，纵轴直接使用脂质组学指标的真实 HO−WT 差值，因此每一个点都可以按生物学方向来解读：
-    CL_PG_ratio、sum_PA、CL_fraction 与 mito_lipid_mass 的上升代表 CL 合成与底物供应/线粒体容量更“通畅”，
-    而 MLCL_CL_ratio、PA_CL_mismatch 与 PA_PG_mismatch 的上升则代表重塑或转运瓶颈加重。
-    结合这一意义，结果表明：跨批次的机制轴 Z 分数虽总体相关性有限，但在 Transport 轴上，较高的轴效应稳定对应更高的 PA_CL_mismatch / PA_PG_mismatch（即 PA 相对 CL/PG 的失配加重），
-    与“转运瓶颈加重”的预期方向一致；Membrane context 轴在 HO 中总体表现为 CL_fraction 略为降低而 mito_lipid_mass 全面下降，
-    提示该轴更多捕捉到“膜环境受损/容量下降”而不是单纯 CL 占比上升。
+    在本图中，纵轴的 sum_CL 代表心磷脂总量在 HO 与 WT 之间的差值（HO−WT），
+    因此每一个点都可以被直接解读为“在该批次、该轴效应水平下，HO 的心磷脂总量是略高还是略低于 WT”。
+    结果显示，多数组学机制轴与 sum_CL 之间的线性相关性整体较弱，
+    仅在 Membrane context 轴上可以观察到“轴效应越偏离 WT，总 CL 越低”的负相关趋势（r 接近 −0.97），
+    与“膜环境/线粒体容量受损时，心磷脂总池难以维持”的直觉相符；
+    其他轴（氧化、重塑、供应、合成、转运）与 sum_CL 之间的相关性则接近于 0 或仅为轻度负相关，
+    提示这些轴在当前数据集中更多反映的是 CL 的分布、比例关系或质量状态的改变，
+    而不是简单的总量增减。
   alternative_explanations: >
-    首先，批次数较少（大多为 n = 3–4）且不同批次的 HO−WT 差值幅度有限，可能掩盖了真实的轴–表型耦合关系；
-    其次，当前 CL panel 仅覆盖有限的分子种类，对氧化 CL（oxCL）几乎未检测到定量信号，导致 Oxidation 轴难以在脂质层面得到直接验证；
-    此外，mechanistic axis Z 分数本身整合了转录组与脂质组信息，其中 RNA 维度的贡献可能在部分轴上占主导，从而削弱了与单一脂质 readout 的线性相关性。
-  summary_type: "exploratory,supportive,negative"
+    一种可能的解释是：在稳态条件下，细胞倾向于维持心磷脂总量在相对窄的范围内，
+    即使合成、重塑或转运轴在 HO 中发生了显著扰动，也可以通过其他代偿机制（如脂肪酸组成调整、
+    其他膜磷脂的替代等）部分对冲总池量的变化，从而削弱了 sum_CL 与机制轴之间的线性耦合；
+    另一方面，sum_CL 作为多个 CL 分子种类的合并 readout，本身会平均掉部分物种特异性的变化，
+    相比 MLCL_CL_ratio、CL_PG_ratio 或 PA mismatch 这类“结构/通路更特异”的指标，
+    更难直接映射到单一机制轴的方向上；
+    再者，本分析仅包含 3–4 个批次，且未对潜在的批次协变量进行显式建模，
+    也可能低估了真实的轴–表型耦合强度。
   claim_supported: >
-    以真实 HO−WT 差值为纵轴时，多组学机制轴与其设计对应的 CL 表型在方向上大多不矛盾，
-    尤其是 Transport 轴与 PA mismatch 指标之间呈现出方向一致的趋势，
-    但除个别组合外，当前数据不足以将机制轴视为“精确预测器”，而更适合作为描述不同类型 CL 瓶颈的整合维度。
+    综合来看，多组学机制轴在方向上并未与 sum_CL 的 HO−WT 差值产生系统性矛盾，
+    但除 Membrane context 轴外，其余轴与总 CL 量之间的相关性较弱且不显著，
+    支持这样一个观点：这些轴更适合作为描述“合成、重塑、转运和膜环境等不同类型 CL 瓶颈”的整合维度，
+    而不是用来精确预测心磷脂总量本身的读数；
+    换言之，EphB1 缺失所引发的 CL 代谢重编程，更主要体现在结构比例与亚细胞分布层面的失衡，
+    而不是简单的 CL 池大小变化。
   link_to_previous: >
-    在前一节中，我们基于多组学数据识别出合成、重塑、转运等多个在 HO 中受扰的 CL 机制轴；
-    本节通过将这些轴与生理上可解释的 CL panel 指标（如 CL_PG_ratio、MLCL_CL_ratio 和 PA mismatch）一一配对，
-    显示轴分数与相应脂质表型在方向上基本自洽，从而为前述“主贡献轴”的生物学含义提供定性支持。
+    在前一节中，我们通过 CL_PG_ratio、MLCL_CL_ratio、PA mismatch 等更“结构特异”的指标，
+    证明合成、重塑与转运轴的 Z 分数在方向上与其设计对应的 CL 表型基本自洽；
+    本节进一步将视角扩展到 sum_CL 这一总量 readout，显示除了 Membrane context 轴外，
+    大多数轴与总 CL 量之间并无强相关，
+    从而强调这些机制轴主要刻画的是 CL 代谢网络内部的瓶颈类型与流向偏移，而非单一总量变化。
   transition_to_next: >
-    接下来，我们将不再逐一考察单一 readout，而是综合各条机制轴及其代表性 CL 表型，
-    构建 EphB1 缺失条件下心磷脂合成、重塑与转运失衡的整体调控模型，并与功能 readout（如 NLRP3 激活和 IL-1β 释放）进行对照。
+    接下来，我们将不再局限于单一 readout，而是综合各条机制轴及其代表性 CL 表型（包括总量与比例类指标），
+    构建 EphB1 缺失条件下心磷脂合成、重塑与转运失衡的整体调控模型，
+    并进一步与功能 readout（如 NLRP3 激活和 IL-1β 释放）进行对照，以评估这些代谢瓶颈在炎症表型中的贡献。
 # ---------- 6. AI Writing Hints（可选）：给 LLM 的写作风格提示 ----------
 ai_hints:
   target_section: ["Results", "Discussion_mini", "Methods_diff"] 

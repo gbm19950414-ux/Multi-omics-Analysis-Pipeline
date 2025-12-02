@@ -23,10 +23,10 @@ assets:
     - "Figure S6D-1 (per-batch effect_z distribution)"
 
 question:
-  context_from_previous: "Fig6C 已分别得到 RNA 与脂质组中各机制轴的 batch-level 效应。"
+  context_from_previous: "Fig6A-C已经介绍多组学整合的概念图、指标选择与数据处理流程。"
   core_question: "EphB1 缺失是否在 RNA 与脂质组中呈现一致且可重复的机制轴效应？"
-  hypothesis_or_expectation: "预期氧化轴在两种组学中方向一致，而其他轴可能受 batch effect 影响更大。"
-  importance_reason: "判断哪些机制轴具有跨组学一致性，是后续提出最终机制模型（Fig6E）的前提。"
+  hypothesis_or_expectation: "预期找到一个在多个批次、两种组学中方向一致的机制轴。"
+  importance_reason: "判断哪些机制轴具有跨批次、组学一致性，是后续提出最终机制模型（Fig6E）的前提。"
 
 rationale:
   model_and_system: "整合 RNA-seq（3 批次）与脂质组学 LC–MS（4 批次）的机制轴效应。"
@@ -66,19 +66,20 @@ results:
     - Transport（Lipid）：+1.55, +1.60（两批次强正）。
 
   group_difference_statement: >
-    各机制轴在 RNA 与脂质组中呈现多样化、批次依赖的方向性变化，其中唯有 Oxidation 轴在两种组学中均表现出
-    KO 相对 WT 的总体上升趋势，而其他轴方向不稳定或呈组学矛盾。
+    各机制轴在 RNA 与脂质组中呈现多样化、批次依赖的方向性变化，其中 Membrane context 轴在两种组学中均表现出
+    KO 相对 WT 的总体相同变化趋势且zscore最大，而其他轴方向批次内不稳定或呈组学矛盾。
 
   robustness_and_qc: >
-    Oxidation 轴在三个 RNA 批次中的方向完全一致（均为正），显示出高度稳健性；脂质组部分批次方向一致，但亦受批次影响。
+    Membrane context 轴在三个 RNA 批次和脂质组中的方向完全一致（分别为负、正）且zscore分数最大，显示出高度稳健性；
     其他轴均呈显著 batch effect，方向在不同批次间经常翻转。
 
   anomalies_or_limits: >
-    Membrane context 轴在 RNA 与脂质组中方向相反，提示存在组学矛盾；Remodeling 与 Supply 轴方向高度不稳定，限制了解释力度。
+    Membrane context 轴在 RNA 与脂质组中方向相反，提示存在组学矛盾，这一问题可以通过加深轴机制理解、更新gene set进行进一步探索解决；
+    Remodeling 与 Supply 轴方向高度不稳定，限制了解释力度。
 
 interpretation:
   minimal_bio_interpretation: >
-    这些结果表明，在 EphB1 缺失条件下，跨组学最一致的变化集中在氧化轴，而运输相关变化在脂质组中亦有较强表现，
+    这些结果表明，在 EphB1 缺失条件下，跨组学最一致的变化集中在 Membrane context 轴，而氧化、运输相关变化在脂质组中亦有较强表现，
     其余机制轴并不表现为稳定的跨批次效应。
 
   alternative_explanations: >
@@ -86,11 +87,11 @@ interpretation:
 
   summary_type: "exploratory, supportive"
 
-  claim_supported: "EphB1 缺失主要影响氧化相关机制轴，而非 CL 合成或供应轴。"
+  claim_supported: "EphB1 缺失主要影响 Membrane context 相关机制轴，而非 CL 合成或供应轴。"
 
-  link_to_previous: "此前的 Fig6C 已独立建立各轴在 RNA 与脂质组中的 batch-level 效应，本节将其整合并评估方向一致性。"
+  link_to_previous: "此前的 Fig6A-C已经介绍多组学整合的概念图、指标选择与数据处理流程，本节将其整合并评估方向一致性。"
 
-  transition_to_next: "基于此，我们在 Fig6E 中构建跨组学、跨轴的最终机制模型，重点呈现氧化与运输轴。"
+  transition_to_next: "基于此，我们在 Fig6E 中构建跨组学、跨轴的最终机制模型，重点关注Membrane context 机制轴。"
 
 aio_hints:
   target_section: ["Results", "Discussion_mini", "Methods_diff"]

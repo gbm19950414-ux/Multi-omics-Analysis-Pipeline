@@ -10,7 +10,7 @@
 meta:
   figure: "6"
   panel: "E"
-  short_title: "跨组学机制轴综合得分：无单一主导瓶颈"
+  short_title: "跨组学机制轴综合得分"
   chapter: "多组学整合：Ephb1 缺失对线粒体相关机制轴的整体影响"
   experiment_id: "multiomics_axis_meta_summary"
   version: 1
@@ -31,9 +31,8 @@ assets:
 # ---------- 1. Scientific Question：本节要回答什么 ----------
 question:
   context_from_previous: >
-    Figure 6C 将 RNA 与脂质组在多个机制轴上的批次层面效应整合为多维热图，
-    指向 Ephb1 缺失可能通过多条合成、重塑、氧化和膜环境相关轴共同调节线粒体脂质稳态，
-    但难以在视觉上直接判断“哪一条轴是主角”。
+    Figure 6d 将 RNA 与脂质组在多个机制轴上的批次层面效应整合为多维热图，
+    指向 Ephb1 缺失可能通过多条机制轴共同调节线粒体脂质稳态，其中 Membrane context 显示出较强的一致性与瓶颈强度。
   core_question: >
     在跨 RNA 与脂质组、多批次综合之后，哪些机制轴在 Ephb1−/− 巨噬细胞中呈现整体增强或受抑，
     是否存在单一占主导地位的机制瓶颈？
@@ -55,7 +54,7 @@ rationale:
   control_logic: >
     WT 作为 Ephb1−/− 的参照组，Z 的方向统一定义为“Ephb1−/− 相对 WT 的改变”，
     Z_multiomics_overall 接近 0 代表两组在该轴上的综合效应有限，
-    正值代表机制增强，负值代表机制受抑。
+    正值代表机制瓶颈增加，负值代表机制瓶颈降低。
   core_justification: >
     若 Ephb1 缺失在某一条机制轴上产生一致而稳定的效应，
     则该轴在跨 RNA+lipid、跨 batch 的 Stouffer 合并后应表现为绝对值显著偏离 0 的综合 Z 值，
@@ -122,16 +121,17 @@ results:
   group_difference_statement: >
     综合 RNA 与脂质组的多批次 meta 分析后，
     Ephb1−/− 巨噬细胞在任一单条机制轴上都未表现出统计学上显著的整体增强或抑制，
-    但在 Transport、Membrane context 及 Oxidation 等轴上可见轻度倾向于“机制增强”的正向 Z，
-    在 Synthesis 轴上则略倾向于“机制受抑”的负向 Z，
+    但在 Transport、Membrane context 及 Oxidation 等轴上可见轻度倾向于“机制瓶颈增强”的正向 Z，
+    在 Synthesis 轴上则略倾向于“机制瓶颈减弱”的负向 Z，
     与 Figure 6C 中“多轴中等效应而非单轴极端效应”的印象相一致。
   robustness_and_qc: >
     这些综合 Z 值基于 3 个 RNA 批次与 3–4 个脂质组批次的轴级结果，
     各批次间效应方向总体保持一致或波动有限，
     更改 Stouffer 合并时对单轴权重的设定不会改变“无单一显著主导轴”的总体结论。
   anomalies_or_limits: >
-    Membrane context 轴在脂质组中呈现显著正向效应而在 RNA 中接近负向边缘显著，
-    使得跨组学合并后的 Z 被部分抵消；
+    Membrane context 轴在脂质组中呈现显著瓶颈效应而在 RNA 中接近负向边缘显著，
+    使得跨组学合并后的 Z 被部分抵消；同 figure6 d 所讲述，这一问题可能出在对 Membrane context 轴的 gene set定义上，
+    未来可通过更新基因集来进一步验证该轴的真实生物学效应。
     这一“组学间方向不完全一致”的情况提示，在解释跨组学综合 Z 时需要小心区分“信号抵消”与“真正缺乏效应”，
     也意味着该轴可能存在转录后或膜微环境层面的调控成分。
 
