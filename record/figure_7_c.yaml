@@ -5,7 +5,7 @@
 meta:
   figure: "Figure 7"
   panel: "C"
-  short_title: "EphB1 下游信号通路活性（跨批次 meta Z + 分批 Z）"
+  short_title: "EphB1 下游信号模块活性（跨批次 meta Z + 分批 Z）"
   chapter: "4.2 Downstream signaling axes linked to EphB1"
   experiment_id: "2025-04-04_RNA_EphB1_downstream_signaling_metaZ"
   version: 1

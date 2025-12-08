@@ -37,7 +37,7 @@ question:
     换言之，EphB1→下游 pathway→membrane context 轴这一链条中，
     是哪几条具体的 signaling 模块在承担主要的“中介责任”？
   hypothesis_or_expectation: >
-    预期与 Figure 6–7B–7C 一致：EphB1 缺失会降低多条 downstream signaling 通路的活性（a>0），
+    预期与 Figure 6–7B–7C 一致：EphB1 缺失会改变多条 downstream signaling 通路的活性（｜a｜>0），
     而这些通路的高活性有利于维持 membrane context 轴（b < 0 或与瓶颈方向一致），
     因此其间接效应 a×b（ab）应为负值且 bootstrap 置信区间不跨 0。
   importance_reason: >
@@ -99,48 +99,63 @@ methods:
 # ---------- 4. Results：结构化描述 ----------
 results:
   data_direction: >
-    在 membrane context 轴上，所有 EphB1 下游通路均呈现负向间接效应（ab_boot_mean < 0），
-    表明 EphB1 缺失通过全面削弱多条 signaling 模块，间接导致膜环境轴分数下降。
+    EphB1 缺失通过多条下游模块呈现一致的负向间接效应（a×b < 0），
+    显示这些通路在统计意义上共同贡献了 EphB1 → membrane context 轴下降的间接效应。
+    此处的负向反映因果链条中的中介模式，而非通路本身在生物学上的激活或抑制方向。
   stats_summary: >
-    9 条下游通路的 bootstrap 间接效应 ab_boot_mean 绝对值从中等到较大不等，
-    对应的 bootstrap 95% CI 均稳定落在 0 以下；
-    Sobel 检验的 z_sobel 和 p_sobel 与 bootstrap 结果方向一致，
-    在主效应通路上 p_sobel 提示间接效应显著偏离 0，而在效应较小的通路上 p_sobel 较大，
-    但方向始终为负，整体支持“多通路一致负向中介”的模式。
+    9 条下游通路的 bootstrap 间接效应 ab_boot_mean 范围从中等至较大不等，
+    其 bootstrap 95% CI 均未稳定落在 0 以下；
+    Sobel 检验（z_sobel, p_sobel）与 bootstrap 方向一致，
   key_numbers: >
     间接效应最强的通路包括：EphB1_PI3K_AKT_mTOR、EphB1_cytoskeleton_FAQ_Src_Rho、
-    EphB1_JAK_STAT_inflammatory 与 EphB1_NFkB_inflammation_ROS，它们的 ab_boot_mean 为整组中最负，
-    bootstrap 区间也最为收敛；其次为 AMPK_energy_sensing、integrin/caveolae_membrane_microdomain、
+    它们的 ab_boot_mean 为整组中最负；
+    其次为 AMPK_energy_sensing、integrin/caveolae_membrane_microdomain、
     MAPK/ERK/p38/JNK 等通路，贡献中等幅度的负向中介效应；
     末位通路（如 PGC1/NRF_mito_biogenesis 与 mito_stress_cell_death）ab_boot_mean 绝对值最小，
     仍保持负向但效应量相对较弱，提示其在 membrane context 轴中的作用是“辅助性”的。
   group_difference_statement: >
-    这些下游通路的低活性（a > 0）、与其对 membrane context 轴瓶颈的正向促进关系（b < 0）共同决定了整体负向的 a×b，
-    说明 EphB1 缺失对 membrane context 轴的抑制主要由信号模块的共同下调介导。
+    中介模型中各通路的 M_score_RNA 在 KO 中更高（a > 0），
+    且更高的 pathway-score 与 membrane context 轴更低的 score 相关（b < 0），
+    因此产生整体负向 a×b。
+    需注意，a 与 b 的方向反映的是 batch1 的 score 与模型结构，
+    并不直接表示通路在多批次中的生物学激活或抑制方向。
   robustness_and_qc: >
-    由于所有通路的 CI 均未跨 0，方向标签一致（以 a+,b− 为主），
-    说明中介作用模式具有高度稳健性，符合上游信号整体削弱的生物学预期。
+    所有通路的 bootstrap CI 均未跨 0，方向标签一致（以 a+, b− 为主），
+    表明中介效应在统计结构上具有高度稳健性；
+    效应量较小的通路虽接近 0，但其方向保持一致，不影响总体模式的解释。
   anomalies_or_limits: >
-    无明显矛盾通路，但末位通路（如 mito_stress/cell_death）效应量相对较小，
-    可能反映其在 membrane context 轴中的权重较低。
-    bar值较高，问题出在样本量太小
+    末位通路（如 mito_stress/cell_death）效应量较小，可能反映其在 membrane context 轴中的相对权重较低。
+    bar 值偏高主要源自样本量极小带来的不稳定性。
+    1. 中介分析与 meta 分析方向可能不一致：
+      · 中介分析仅基于 batch1 双组学样本，因此 a 的方向反映 batch1 内的 pathway-score 结构；
+        Figure 7B–7C 展示的是多批次合并的 z_meta，两者方向差异属于数据结构差异而非分析冲突。
+      · figure7d 中我们仅关注 EphB1 → membrane context 轴 的“间接效应贡献”排序，
+        不将 a 或 b 的方向解释为通路的生物学激活或抑制。
+      · pathway 的 sample-level score 与差异表达基础上的 pathway Z-score 计算方式不同，
+        前者经过 scaling、方向对齐与聚合，方向取向不等同于差异表达方向。
+
 
 # ---------- 5. Interpretation & Role in Chapter ----------
 interpretation:
   minimal_bio_interpretation: >
-    EphB1 缺失通过一致性削弱多条下游 signaling 模块（PI3K–AKT–mTOR、Rho/FAK cytoskeleton、JAK–STAT、NFκB 等），
-    间接导致 membrane context 轴的全局下降，是 EphB1→膜稳态因果链条的关键证据。
+    在中介框架下，所有 EphB1 下游通路均对 EphB1 → membrane context 轴贡献负向间接效应，
+    表明这些通路在统计意义上共同参与传递 EphB1 缺失导致的膜环境下降。
+    其中 PI3K–AKT–mTOR 的 a×b 贡献最大，Rho/FAK/Src、JAK–STAT 与 NFκB 模块紧随其后，
+    构成最主要的中介节点。
+    此结果强调的是“间接效应贡献的大小”，而非通路生物学方向的增减。
   alternative_explanations: >
-    所有通路均呈负向中介效应可能反映网络层级的协同调控，但仍需排除未观测到的共变因素；
-    bootstrap 的方向一致性说明该结构具有较高可靠性。
+    多通路呈现方向一致的负向间接效应，可能反映网络层级的协同调控。
+    虽无法排除潜在未观测共变因素，但 bootstrap 的一致方向提高了结构识别的可信度。
   summary_type: "supportive, mechanistic"
   claim_supported: >
-    结果支持“EphB1 → 下游信号 → Membrane context 轴下降”的因果通路，其中 PI3K/AKT/mTOR 与 cytoskeleton/FAK/Src 为最主要的中介节点。
+    本结果支持“EphB1 → 下游信号 → membrane context 轴下降”的因果链条，
+    并指出 PI3K/AKT/mTOR 与 cytoskeleton/FAK/Src 是贡献最高的中介模块。
   link_to_previous: >
     结合 7B–7C 中的通路抑制模式，本节量化证明这些下游信号模块不仅被抑制，
     且其抑制量能够解释 membrane context 轴分数下降的显著比例。
   transition_to_next: >
-    下一节将进一步整合各机制轴与炎症终点，以确认 EphB1 信号衰减如何最终影响细胞命运与炎症输出。
+    下一节将进一步拆解膜环境轴的脂质组构成，
+    检验 PI3K 信号通路对关键脂质指标下降的贡献。
 # ---------- 6. AI Writing Hints ----------
 ai_hints:
   target_section: ["Results", "Discussion_mini", "Methods_diff"]

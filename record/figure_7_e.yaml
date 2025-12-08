@@ -1,0 +1,198 @@
+# ============================================================
+# schema.yaml v2 —— 单个 panel 的结构化写作模版
+# Figure 7E：Mediation analysis connecting EphB1 → mediator → lipid indicators
+# ============================================================
+
+meta:
+  figure: "Figure 7"
+  panel: "E"
+  short_title: "EphB1–signal–lipid indicator 中介分析"
+  chapter: "7.5 Mediation analysis on lipid indicators downstream of EphB1"
+  experiment_id: "2025-03-21_mediation_CL_indicators"
+  version: 1
+
+assets:
+  main_figure_file: "results/figs/figure_7_e.pdf"
+  sub_panels:
+    CL_fraction: "results/figs/figure_7_e_CL_fraction_CL_total_.pdf"
+    CL_membrane: "results/figs/figure_7_e_CL_membrane_CL_.pdf"
+    mito_lipid_mass: "results/figs/figure_7_e_Mito_lipid_mass_PC_PE_CL_.pdf"
+    PC_membrane: "results/figs/figure_7_e_PC_membrane_PC_.pdf"
+    PE_membrane: "results/figs/figure_7_e_PE_membrane_PE_.pdf"
+  raw_data_files:
+    - "results/figs/mediation_summary.tsv"
+  analysis_scripts:
+    - "scripts/analysis/06_mediation_analysis_minimal.R"
+  supplementary_items:
+    - "Figure S7E"   # 可放更完整的 mediator × lipid 指标组合
+
+# ---------- 1. Scientific Question ----------
+question:
+  context_from_previous: >
+    在 Figure 7D 已经基于 membrane context 轴的综合 score 证实，
+    EphB1 缺失对膜环境轴的影响可以部分由多条下游 signaling 通路共同中介，其中PI3K贡献最强之后，
+    本节进一步将 membrane context 轴拆解为具体的脂质 readout：
+    包括 CL fraction（CL/total）、membrane CL 含量、线粒体总脂质量
+    （PC+PE+CL）、membrane PC 以及 membrane PE。
+  core_question: >
+    EphB1 缺失对这些具体脂质指标（CL fraction、membrane CL、
+    线粒体总脂质量以及膜 PC/PE）的改变，是否同样需要通过
+    EphB1 下游信号通路PI3K传递？
+    这些通路在不同脂质 readout 上的中介模式是否一致？
+  hypothesis_or_expectation: >
+    预期与 membrane context 轴的结果一致：EphB1 缺失首先改变多条 downstream
+    signaling pathway 的活性（a ≠ 0），而这些 pathway 的活性变化
+    再分别与 CL fraction、membrane CL、mito lipid mass 以及 membrane PC/PE
+    的变化相关联，从而在各个脂质指标上形成可检测的间接效应 a×b
+    其中PI3K 在五个指标里几乎都是绝对值最大的通路
+  importance_reason: >
+    如果能够在脂质指标层面观察到与 membrane context 轴类似的中介模式，
+    将有助于说明 membrane context 轴并非抽象的统计构建，
+    而是对 CL 分数、线粒体脂质量及膜 PC/PE 等具体脂质 readout 的可靠综合，
+    同时明确同一组 EphB1 依赖的信号模块在多个脂质维度上发挥作用。
+
+# ---------- 2. Rationale / Design Logic ----------
+rationale:
+  model_and_system: >
+    延续 X→M→Y 的线性中介框架，其中 X 为 EphB1 基因型（WT=0, Ephb1−/−=1），
+    M 为基于 RNA-seq 计算的 EphB1 downstream signaling pathway sample-level score
+    （包括 PI3K–AKT–mTOR、cytoskeleton/FAK/Src、JAK–STAT、NFκB、
+    AMPK、integrin/caveolae、MAPK/ERK/p38/JNK、PGC1/NRF mito biogenesis、
+    mito stress/cell death 等 9 条通路），
+    Y 则从单一 membrane context 轴 score 拆解为五个脂质 readout。
+  key_variables: >
+    自变量 X：EphB1 基因型（WT vs Ephb1−/−）；
+    中介变量 M：9 条 curated EphB1 下游通路的样本级 pathway 活性分数；
+    结果变量 Y：CL fraction (CL/total)、membrane CL 含量、
+    线粒体总脂质量 (PC+PE+CL)、membrane PC 以及 membrane PE。
+  control_logic: >
+    对每个脂质 readout 独立建立一组中介模型，
+    先估计 X→Y 的总效应 c_total（Y ~ X），
+    再估计 X→M 的路径 a（M ~ X）以及在控制 X 后 M→Y 的路径 b（Y ~ X+M 中 M 的系数），
+    其中 a×b 即为 X 通过该通路对该脂质指标产生的间接效应；
+    以水平条形图展示各通路的 a×b bootstrap 均值及 95% CI，并用 a、b 的符号标注方向。
+  core_justification: >
+    将 membrane context 轴拆解到具体脂质 readout 后重复同一中介框架，
+    可以检验 Figure 7D 观察到的 “EphB1–signal–membrane context”
+    因果链条是否在 CL fraction、membrane CL 以及膜 PC/PE 等更直观的脂质指标上同样成立，
+    从而在机制与表型之间建立更细致的对应关系。
+
+# ---------- 3. Methods（差异性信息） ----------
+methods:
+  inherits_from_protocol: "default_mediation_pipeline_CL_axes"
+  biological_material: >
+    使用与 Figure 7D 相同的一批 WT 与 Ephb1−/− 小鼠来源巨噬细胞，
+    对同一样本同时获得 RNA-seq 与脂质组学数据。
+  experimental_groups: >
+    仅以 EphB1 基因型（WT vs Ephb1−/−）为自变量，不额外引入药物或刺激，
+    与前述中介分析保持一致。
+  stimuli_and_treatment: "无外源刺激，分析稳态条件下 EphB1 缺失的长期效应。"
+  time_points: "单一稳态时间点（终点采样）。"
+  dose_info: ""
+  readout_and_assay: >
+    中介变量 M 仍为 sample_scores_for_mediation.tsv 中 9 条 EphB1 downstream pathway
+    的 RNA-based sample-level score；
+    结果变量 Y 分别取 CL fraction (CL/total)、membrane CL 含量、
+    线粒体总脂质量 (PC+PE+CL)、membrane PC 与 membrane PE 对应的列。
+    对每个脂质指标单独拟合线性中介模型，计算 a、b 以及间接效应 a×b，
+    并通过 bootstrap 获得 a×b 的经验分布与 95% 置信区间。
+  replicates: >
+    中介分析基于 batch1 中具有 RNA+脂质配对数据的样本（3 WT + 2 KO），
+    与 Figure 7D 使用的样本集合完全一致。
+  analysis_notes: >
+    各子图的横轴均为间接效应 a×b 的 bootstrap 均值，
+    误差线表示 95% CI；图中右侧的 “a+, b+” 或 “a+, b−” 标签
+    用于标注对应脂质指标下各通路的 a、b 符号组合。
+    不同脂质指标的 a×b 数值量纲不同，因此仅在同一子图内比较各通路的相对大小与方向。
+  minimal_methods_summary: >
+    在与 Figure 7D 相同的 X→M→Y 中介框架下，将 Y 从 membrane context 轴
+    拓展为五个脂质 readout，分别估计 EphB1 缺失通过 9 条下游通路对各脂质指标的间接效应。
+
+# ---------- 4. Results：结构化描述 ----------
+results:
+  data_direction: >
+    在 CL fraction (CL/total) 与 membrane CL 两个 readout 中，
+    所有 EphB1 下游通路均被标记为 a+, b+，
+    即 EphB1 缺失与通路活性得分升高相关（a+），
+    而更高的通路得分又与 CL fraction 或 membrane CL 的升高相关（b+），
+    从而在这两个指标上形成正向间接效应 a×b > 0；
+    相对地，在 mito lipid mass (PC+PE+CL)、membrane PC 与 membrane PE 三个 readout 中，
+    所有通路均为 a+, b−，提示 EphB1 缺失同样伴随通路得分升高（a+），
+    但更高的通路活性与线粒体脂质量及膜 PC/PE 的降低相关联（b−），
+    因此在这些指标上表现为负向间接效应 a×b < 0。
+  stats_summary: >
+    五个条形图分别展示了 9 条通路在对应脂质指标上的间接效应 a×b 的 bootstrap 均值及 95% CI。
+    可以看到，各脂质 readout 内大部分通路的 95% CI 与 0 存在清晰间隔，
+    在同一指标中方向完全一致（均为 a+, b+ 或均为 a+, b−），
+    提示这些中介效应在符号与大致量级上具有一定稳定性，而非接近 0 的随机波动。
+  key_numbers: >
+    在 CL fraction 与 membrane CL 图中，PI3K–AKT–mTOR 通路的间接效应 a×b 绝对值在 9 条通路中普遍居于前列，
+    条形长度明显大于大多数其他通路；cytoskeleton/FAK/Src 等通路紧随其后，贡献中等偏大的正向 a×b，
+    AMPK、integrin/caveolae、MAPK/ERK/p38/JNK 以及 PGC1/NRF mito biogenesis 与 mito stress/cell death
+    等通路则多为中等或较小的正向效应。
+    在 mito lipid mass、membrane PC 与 membrane PE 三个图中，
+    同一组通路整体转为负向 a×b，其中 PI3K–AKT–mTOR 仍然是绝对值最大的或接近最大的通路之一，
+    而 cytoskeleton/FAK/Src、JAK–STAT 与 NFκB 等模块则在负向效应上呈现中等幅度贡献，
+    提示在不同脂质 readout 上，PI3K 轴始终位于中介强度的最前列，其余通路以相近但略低的相对强度共同参与。
+
+  group_difference_statement: >
+    方向标签总结了 EphB1 基因型、通路活性分数与脂质指标之间的关系：
+    在所有五个 readout 中，EphB1 缺失均与下游通路得分升高相关（a+），
+    但通路得分与脂质指标的相关方向存在差异：
+    对 CL fraction 与 membrane CL 为正相关（b+），
+    对 mito lipid mass、membrane PC 与 membrane PE 为负相关（b−），
+    因而在不同指标上表现出正、负相反的间接效应方向。
+  robustness_and_qc: >
+    虽然样本量较小，五个脂质指标上各通路的 95% CI 在方向上高度一致，
+    未见明显“方向翻转”的异常通路，
+    多数通路的 CI 与 0 之间具有可视化的间隔，支持这些间接效应在方向层面较为稳健。
+    另一方面，由于不同指标的单位和数值范围差异较大，
+    不宜在不同子图之间直接比较 a×b 的绝对数值。
+  anomalies_or_limits: >
+    个别通路在某些脂质指标上的 a×b 接近 0，误差条相对较宽，
+    暗示对这些弱效应的估计存在较大不确定性；
+    此外，所有分析均基于单批次（batch1）双组学数据，
+    结论主要反映该批次内部的通路–脂质关联结构，外推到更大样本仍需谨慎。
+
+# ---------- 5. Interpretation & Role in Chapter ----------
+interpretation:
+  minimal_bio_interpretation: >
+    将 membrane context 轴拆解为 CL fraction、membrane CL、
+    线粒体总脂质量及膜 PC/PE 后，可以看到同一组 EphB1 下游信号通路
+    同时中介了这些脂质 readout 的变化：
+    EphB1 缺失一方面与下游通路活性普遍升高相关（a+），
+    其中 PI3K–AKT–mTOR 通路在五个脂质 readout 中整体表现为间接效应 a×b 绝对值最大的模块，
+    是跨指标最稳定、贡献最高的候选中介轴；
+    另一方面，这些通路的高活性在 CL fraction 与 membrane CL 上
+    与更高的 CL 指标相关，在线粒体脂质量及膜 PC/PE 上则与指标下降相关（b+ 或 b−），
+    说明 “EphB1 → PI3K/相关下游信号 → 脂质组成与储备” 的中介链条
+    在多个具体脂质维度上具有一致性。
+  alternative_explanations: >
+    多个脂质指标上呈现类似的通路排序与方向，
+    可能部分来源于通路之间的共线性或共享上游调控，
+    难以完全分割每条通路的独立贡献；
+    同时，小样本带来的 bootstrap 不确定性意味着
+    本图更适合作为支持性证据，而非精确量化各通路对单一脂质指标的贡献百分比。
+  summary_type: "supportive, mechanistic"
+  claim_supported: >
+    本图支持 Figure 7D 所提出的 “EphB1 → 下游信号 → membrane context 轴” 因果框架，
+    不仅在轴级综合得分上成立，也在 CL fraction、膜 CL 含量、
+    线粒体总脂质量及膜 PC/PE 等具体脂质 readout 上得到重现；
+    在所有这些指标中，PI3K–AKT–mTOR 通路的间接效应 a×b 绝对值始终位居通路前列，
+    提示其是连接 EphB1 缺失与脂质重塑之间最主要的候选中介模块之一，
+    其余 cytoskeleton/FAK/Src、JAK–STAT、NFκB 等通路则提供协同但相对次级的中介贡献。
+  link_to_previous: >
+    与 Figure 7D 基于机制轴得分的分析相比，
+    Figure 7E 将结果拆解为更直观的脂质指标，并得到相似的通路方向与相对排序，
+    从侧面验证 membrane context 轴构建在脂质层面的合理性，
+    也为后续聚焦关键通路的功能实验提供了靶点范围。
+  transition_to_next: >
+    后续章节将结合针对代表性通路（如 PI3K–AKT–mTOR 及 cytoskeleton/FAK/Src）的干预实验，
+    进一步检验其在脂质重塑和线粒体功能调控中的因果作用。
+
+# ---------- 6. AI Writing Hints ----------
+ai_hints:
+  target_section: ["Results", "Discussion_mini", "Methods_diff"]
+  tone: "neutral"
+  target_journal_style: "Nature Metabolism"
+  language: "zh_en_mix"

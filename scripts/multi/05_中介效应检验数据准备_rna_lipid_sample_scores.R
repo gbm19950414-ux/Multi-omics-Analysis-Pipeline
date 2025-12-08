@@ -475,6 +475,28 @@ if (!is.null(precomp_lipid_path) && file.exists(precomp_lipid_path)) {
 
   lipid_axis_df <- readr::read_tsv(precomp_lipid_path, show_col_types = FALSE)
 
+  # 用户希望额外作为 Y 的脂质/指标列（原始列名）
+  extra_y_raw <- c("sum_CL", "CL_fraction", "mito_lipid_mass",
+                   "PC", "PE", "CL")
+
+  extra_y_cols <- intersect(extra_y_raw, colnames(lipid_axis_df))
+  if (length(extra_y_cols) > 0) {
+    message("[INFO] 在预计算脂质表中发现以下将作为额外 Y 使用的列: ",
+            paste(extra_y_cols, collapse = ", "))
+
+    # 为了让后续中介脚本将其识别为 Y（outcome），统一加上 `_score` 后缀
+    extra_rename <- stats::setNames(
+      extra_y_cols,
+      paste0(extra_y_cols, "_score")
+    )
+
+    lipid_axis_df <- lipid_axis_df %>%
+      dplyr::rename(!!!extra_rename)
+  } else {
+    message("[INFO] 在预计算脂质表中未找到指定的额外 Y 列（sum_CL, CL_fraction, mito_lipid_mass, PC, PE, CL），",
+            "将只使用已有的 *_score 轴分数列。")
+  }
+
   # 自动识别所有 *_score 列，一次性 join 进来，作为 CL 相关多轴脂质表型
   score_cols <- grep("_score$", colnames(lipid_axis_df), value = TRUE)
 
