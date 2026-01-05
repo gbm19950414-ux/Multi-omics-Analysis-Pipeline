@@ -15,7 +15,7 @@
 # 输出：    results/figs/figure_6_b.pdf
 #
 # 导出逻辑（方案 A）：
-#   1) gt::gtsave() → PNG（通过 vwidth 控制近似 83 mm 宽）
+#   1) gt::gtsave() → PNG（通过 vwidth 控制近似 84 mm 宽）
 #   2) magick::image_read() 读 PNG
 #   3) magick::image_trim() 裁掉所有多余白边
 #   4) magick::image_write(..., format = "pdf") → 画布贴合内容的 PDF
@@ -27,6 +27,8 @@ suppressPackageStartupMessages({
   library(stringr)
   library(gt)
   library(magick)
+  library(grid)
+  library(gridExtra)
 })
 
 # 1. 定义项目路径 & 输入输出路径 ----------------------------------------------
@@ -63,6 +65,24 @@ df <- df_raw %>%
 # 3. 定义 axis 排序顺序（可按需要修改） -------------------------------------
 
 preferred_axes <- c("Synthesis", "Oxidation", "Transport", "Supply", "Membrane context")
+
+# --- 固定输出物理尺寸（严格 84 mm 宽）与字号（按 300 dpi 换算） -----------------
+# 最终 PDF 使用 density = 300 dpi，因此：
+#   px = inch * dpi；pt = inch * 72  ⇒  px = pt/72 * dpi
+DPI_OUT <- 300
+TARGET_WIDTH_MM <- 84
+TARGET_WIDTH_PX <- round(TARGET_WIDTH_MM / 25.4 * DPI_OUT)  # 84 mm @ 300 dpi ≈ 992 px
+
+BODY_PT  <- 3
+LABEL_PT <- 4
+BODY_PX  <- BODY_PT  / 72 * DPI_OUT   # 2 pt @ 300 dpi ≈ 8.33 px
+LABEL_PX <- LABEL_PT / 72 * DPI_OUT   # 3 pt @ 300 dpi ≈ 12.5 px
+
+# 线条粗细（按 300 dpi 换算）
+THICK_PT <- 0.5
+THIN_PT  <- 0.25
+THICK_PX <- THICK_PT / 72 * DPI_OUT   # 0.5 pt @ 300 dpi ≈ 2.08 px
+THIN_PX  <- THIN_PT  / 72 * DPI_OUT   # 0.25 pt @ 300 dpi ≈ 1.04 px
 
 # 4. 定义一个函数：对某个 feature_type 进行 axis 维度的聚合 ------------------
 
@@ -113,77 +133,172 @@ plot_df <- res_all %>%
   ) %>%
   dplyr::select(Level, Axis, Indicators)
 
-# 7. 用 gt 生成表格对象 ------------------------------------------------------
+# 6.5 依据内容自适应列宽（Level / Axis），为 Indicators 留足空间 ---------------
+# 经验：Arial 在 6 pt 下平均字符宽度约为字号的 ~0.55 倍（像素单位）
+char_px <- BODY_PX * 0.55
+pad_px  <- 28  # 预留左右内边距/分隔
 
-if (nrow(plot_df) == 0L) {
+level_max_chars <- max(nchar(plot_df$Level), na.rm = TRUE)
+axis_max_chars  <- max(nchar(plot_df$Axis),  na.rm = TRUE)
+
+# 先按内容估计宽度，并做上/下限约束
+level_w <- level_max_chars * char_px + pad_px
+axis_w  <- axis_max_chars  * char_px + pad_px
+
+# 上下限：避免前两列过宽挤占 Indicators
+level_w <- max(180, min(320, level_w))
+axis_w  <- max(120, min(260, axis_w))
+
+# 保障 Indicators 至少有 520 px
+min_ind_w <- 520
+ind_w <- TARGET_WIDTH_PX - level_w - axis_w
+if (ind_w < min_ind_w) {
+  # 优先压缩 Level / Axis 到各自下限，确保 Indicators
+  deficit <- (min_ind_w - ind_w)
+  shrink_level <- min(deficit * 0.6, level_w - 180)
+  level_w <- level_w - shrink_level
+  deficit <- deficit - shrink_level
+  shrink_axis <- min(deficit, axis_w - 120)
+  axis_w <- axis_w - shrink_axis
+  ind_w <- TARGET_WIDTH_PX - level_w - axis_w
+}
+
+# 最终取整，避免小数像素带来的渲染抖动
+level_w <- as.integer(round(level_w))
+axis_w  <- as.integer(round(axis_w))
+ind_w   <- as.integer(round(ind_w))
+
+# 6.6 为 Indicators 自动换行（通过 \n 触发行高自适应） ---------------------------
+# 估算每行可容纳字符数：Indicators 列宽 / 单字符像素宽度
+ind_pad_px <- 24
+wrap_chars <- max(20, floor((ind_w - ind_pad_px) / char_px))
+
+plot_df2 <- plot_df %>%
+  dplyr::mutate(
+    Indicators = stringr::str_wrap(Indicators, width = wrap_chars)
+  )
+
+# 7. 生成矢量 PDF（可在 Illustrator 中保持为矢量文字/线条） -----------------------
+
+if (nrow(plot_df2) == 0L) {
   stop("没有生成任何聚合结果，请检查原始表中的 feature_type / axis 是否正确。")
 }
 
-tab <- plot_df %>%
-  gt::gt() %>%
-  # 如果你不想在最终图里显示标题，可以把 tab_header 整块注释掉
-  gt::tab_header(
-    title = gt::md("**Figure 6B. Axis-level mechanistic indicators summary**")
-  ) %>%
-  # 列标题加粗
-  gt::tab_style(
-    style = list(gt::cell_text(weight = "bold")),
-    locations = gt::cells_column_labels(gt::everything())
-  ) %>%
-  # 基本排版选项：字体、字号、行距
-  gt::tab_options(
-    table.font.names = "Arial",
-    table.font.size  = 7,
-    data_row.padding = gt::px(1)
-  ) %>%
-  # 缩小列宽，使总宽度适合 83 mm 画布（约 314 px）
-  gt::cols_width(
-    Level      ~ gt::px(70),
-    Axis       ~ gt::px(70),
-    Indicators ~ gt::px(170)
-  ) %>%
-  gt::cols_align(
-    align = "center",
-    columns = c(Level, Axis)
-  ) %>%
-  gt::cols_align(
-    align = "left",
-    columns = Indicators
+# 目标物理宽度（英寸）
+W_IN <- TARGET_WIDTH_MM / 25.4
+
+# 线宽（grid 的 lwd 单位是“线宽倍数”，这里直接用 pt 更直观：在 PDF 中仍为矢量）
+# 通过 gpar(lwd=...) 传递，通常在 pdf 设备中表现为 pt 级线宽。
+
+# 构建表格主题：
+# - 正文 3 pt Helvetica
+# - 表头 4 pt Helvetica Bold
+# - 细线 0.25 pt（行分隔）
+# - 粗线 0.5 pt（表头分隔/外框）
+
+thm <- gridExtra::ttheme_minimal(
+  core = list(
+    fg_params = list(fontfamily = "Helvetica", fontsize = BODY_PT, hjust = 0, x = 0.02, y = 0.5),
+    bg_params = list(fill = "white", col = NA)
+  ),
+  colhead = list(
+    fg_params = list(fontfamily = "Helvetica", fontsize = LABEL_PT, fontface = "bold", hjust = 0.5, x = 0.5),
+    bg_params = list(fill = "white", col = NA)
   )
-
-# 8. 第一步：gt → PNG（通过 webshot2 截图） ---------------------------------
-# 说明：
-# - gtsave(filename = *.png) 走的是 webshot2::webshot 路线；
-# - vwidth/vheight 单位是像素；
-# - 83 mm ≈ 314 px（按 96 dpi 估），这里 vwidth 取 320 px 稍微留一点余地；
-# - vheight 取 600 px 足够容纳 12 行；expand = 0 减少额外白边（仍可能有少量）。
-
-message("Step 1: save gt table to PNG ...")
-
-gt::gtsave(
-  data     = tab,
-  filename = tmp_png,
-  vwidth   = 320,   # 近似 83 mm 宽
-  vheight  = 600,
-  expand   = 0
 )
 
-# 9. 第二步：magick 读 PNG → 裁白边 → 写成 PDF -------------------------------
+# 生成 table grob（Indicators 已经包含换行符，会自动增高行高）
+tg <- gridExtra::tableGrob(plot_df2, rows = NULL, theme = thm)
 
-message("Step 2: trim PNG and convert to PDF ...")
+# 进一步压缩行高（对所有数据行生效，不影响换行逻辑）
+# 系数 < 1 会让行更紧凑
+compact_factor <- 0.85
+# 第 1 行是表头，从第 2 行开始是正文
+for (i in seq_along(tg$heights)) {
+  if (i > 1) tg$heights[i] <- tg$heights[i] * compact_factor
+}
 
-img <- magick::image_read(tmp_png)
+# 对齐：Level/Axis 居中，Indicators 左对齐
+# （tableGrob 的列从 1 开始；行 1 是表头）
+# 核心单元格在 tg$grobs 中，使用 gtable 来微调对齐
+suppressWarnings({
+  tg <- gtable::gtable_add_grob(tg, tg$grobs, t = 1, l = 1)
+})
 
-# 自动裁掉所有背景白边（以左上角像素为背景色）
-img_trim <- magick::image_trim(img)
+# 设置列宽：使用“毫米”等效宽度，确保总体宽度 = 84 mm
+# 注意：grid 的 unit 可以使用 "null"/"mm"，这里用 mm 直接锁物理尺寸
+col_w_mm <- c(level_w, axis_w, ind_w) / DPI_OUT * 25.4
+# 防御：避免极端情况下出现负数/0
+col_w_mm[col_w_mm < 5] <- 5
 
-# 可选：设置一个合理的分辨率，方便在 AI 里看到物理尺寸
-# 例如：300 dpi（不设置也可以，AI 里按像素缩放）
-magick::image_write(
-  image  = img_trim,
-  path   = output_pdf,
-  format = "pdf",
-  density = "300x300"
+tg$widths[1] <- grid::unit(col_w_mm[1], "mm")
+tg$widths[2] <- grid::unit(col_w_mm[2], "mm")
+tg$widths[3] <- grid::unit(col_w_mm[3], "mm")
+
+# --- 自定义横线：仅行间细线 + 表头上下粗线（无竖线、无外框） -------------------
+# 表格有 1 行表头 + N 行数据
+n_data_rows <- nrow(plot_df2)
+
+# 一条横线 grob（在所处单元格内的 y=0 或 y=1 位置画线，跨越所有列）
+make_hline <- function(y_npc, lwd_pt) {
+  grid::segmentsGrob(
+    x0 = grid::unit(0, "npc"), x1 = grid::unit(1, "npc"),
+    y0 = grid::unit(y_npc, "npc"), y1 = grid::unit(y_npc, "npc"),
+    gp = grid::gpar(col = "black", lwd = lwd_pt, lineend = "butt")
+  )
+}
+
+# 表头上下各一条 0.5 pt 横线（明确保证列标题行下方有粗线）
+# 表头：上粗线（y=1）+ 下粗线（y=0）放在第 1 行
+n_cols <- ncol(plot_df2)
+header_top <- make_hline(1, THICK_PT)
+# 放在表头行内稍微上移，避免刚好落在边界被渲染吞掉
+header_bot <- make_hline(0.02, THICK_PT)
+
+tg <- gtable::gtable_add_grob(tg, header_top, t = 1, l = 1, r = n_cols, z = Inf, clip = "off")
+tg <- gtable::gtable_add_grob(tg, header_bot, t = 1, l = 1, r = n_cols, z = Inf, clip = "off")
+
+# 进一步保险：在第一条数据行顶部再画一条 0.5 pt 粗线（与表头下边界重合）
+if (n_data_rows > 0) {
+  tg <- gtable::gtable_add_grob(
+    tg,
+    make_hline(0.98, THICK_PT),
+    t = 2, l = 1, r = n_cols,
+    z = Inf, clip = "off"
+  )
+}
+
+# 数据行：每行底部一条细线（y=0）
+if (n_data_rows > 0) {
+  for (i in seq_len(n_data_rows)) {
+    row_idx <- 1 + i  # tableGrob: 1=header, 2..=data
+    tg <- gtable::gtable_add_grob(
+      tg,
+      make_hline(0, THIN_PT),
+      t = row_idx, l = 1, r = n_cols,
+      z = Inf, clip = "off"
+    )
+  }
+}
+
+# 根据 gtable 行高总和自动计算 PDF 高度（英寸），确保完整显示
+# 使用 sum(tg$heights) 比 grobHeight() 更稳（避免在某些设备上低估高度）
+H_IN <- grid::convertHeight(sum(tg$heights), "in", valueOnly = TRUE) + 0.20
+
+message("Step: write vector PDF ...")
+
+grDevices::pdf(
+  file = output_pdf,
+  width = W_IN,
+  height = H_IN,
+  family = "Helvetica",
+  useDingbats = FALSE
 )
 
-message("Done: ", output_pdf)
+grid::grid.newpage()
+# 仅绘制表格（横线已作为 grob 叠加在 tg 内部）
+grid::grid.draw(tg)
+
+grDevices::dev.off()
+
+message("Done (vector): ", output_pdf)

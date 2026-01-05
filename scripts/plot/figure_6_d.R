@@ -31,6 +31,7 @@ suppressPackageStartupMessages({
   library(stringr)
   library(ggplot2)
   library(purrr)
+  library(grid)
 })
 
 `%||%` <- function(a, b) if (!is.null(a)) a else b
@@ -42,7 +43,7 @@ args <- commandArgs(trailingOnly = TRUE)
 config_path <- if (length(args) >= 1) {
   args[1]
 } else {
-  "scripts/plot/figure_6_d_config.yaml"
+  "/Volumes/Samsung_SSD_990_PRO_2TB_Media/EphB1/02_protocols/figure_style_nature.yaml"
 }
 
 if (file.exists(config_path)) {
@@ -53,6 +54,42 @@ if (file.exists(config_path)) {
       " ，将使用脚本内置默认设置。\n", sep = "")
   cfg <- list()
 }
+
+# --------- Global figure style (Nature) ---------------------
+style_path <- "/Volumes/Samsung_SSD_990_PRO_2TB_Media/EphB1/02_protocols/figure_style_nature.yaml"
+if (!file.exists(style_path)) {
+  stop("[ERROR] 找不到 figure style 文件: ", style_path)
+}
+style <- yaml::read_yaml(style_path)
+
+## 兼容两种 YAML 写法：
+# A) typography$sizes_pt$legend_text_default (推荐：本项目 figure_style_nature.yaml)
+# B) legend_text_default$family / legend_text_default$size_pt (旧版)
+font_family <- style$typography$font_family_primary %||%
+  style$legend_text_default$family %||% "Helvetica"
+
+font_size_pt <- style$typography$sizes_pt$legend_text_default %||%
+  style$legend_text_default$size_pt %||% 10
+
+if (is.null(font_size_pt) || is.na(font_size_pt)) {
+  stop("[ERROR] figure_style_nature.yaml 中未找到 typography:sizes_pt:legend_text_default（或旧版 legend_text_default:size_pt）")
+}
+
+# 进一步从 figure_style_nature.yaml 读取外观参数（字号/线宽/边距）
+axis_tick_pt  <- style$typography$sizes_pt$axis_tick_default  %||% font_size_pt
+axis_label_pt <- style$typography$sizes_pt$axis_label_default %||% font_size_pt
+legend_text_pt  <- style$typography$sizes_pt$legend_text_default  %||% font_size_pt
+legend_title_pt <- style$typography$sizes_pt$legend_title_default %||% font_size_pt
+
+line_width_pt <- style$lines$line_width_pt %||% 0.5
+axis_line_pt  <- style$lines$axis_line_default_pt %||% 0.25
+
+plot_margin_pt <- style$layout$plot_margin_pt %||% list(top = 0, right = 0, bottom = 0, left = 0)
+
+# pt → mm（ggplot 的 linewidth 用 mm）
+pt_to_mm <- function(pt) pt * 25.4 / 72
+line_width_mm <- pt_to_mm(line_width_pt)
+axis_line_mm  <- pt_to_mm(axis_line_pt)
 
 effects_long_path <- cfg$effects_long_path %||%
   "results/multiomics/mechanistic_axis_effects_long.tsv"
@@ -155,11 +192,12 @@ if (!dir.exists(output_dir)) {
 }
 
 p <- ggplot(dat2, aes(x = omics_batch, y = axis, fill = effect_z)) +
-  geom_tile(color = "grey90") +
+  geom_tile(color = "grey90", linewidth = axis_line_mm) +
   ## 显著性用小星号标注
   geom_text(
     aes(label = sig_label),
-    size = 2.8,
+    family = font_family,
+    size = legend_text_pt / ggplot2::.pt,
     color = "black"
   ) +
   scale_fill_gradient2(
@@ -172,18 +210,29 @@ p <- ggplot(dat2, aes(x = omics_batch, y = axis, fill = effect_z)) +
     x = NULL,
     y = NULL
   ) +
-  theme_minimal(base_size = 10) +
+  theme_minimal(base_size = font_size_pt, base_family = font_family) +
   theme(
-    axis.text.x  = element_text(angle = 45, hjust = 1, vjust = 1),
-    axis.text.y  = element_text(color = "black"),
+    text = element_text(family = font_family, size = legend_text_pt),
+    axis.text.x  = element_text(angle = 45, hjust = 1, vjust = 1, family = font_family, size = axis_tick_pt),
+    axis.text.y  = element_text(color = "black", family = font_family, size = axis_tick_pt),
+    axis.title.x = element_text(family = font_family, size = axis_label_pt),
+    axis.title.y = element_text(family = font_family, size = axis_label_pt),
+    legend.text  = element_text(family = font_family, size = legend_text_pt),
+    legend.title = element_text(family = font_family, size = legend_title_pt),
     panel.grid   = element_blank(),
     legend.position = "right",
-    plot.margin  = margin(5.5, 5.5, 5.5, 5.5)
+    plot.margin  = margin(plot_margin_pt$top, plot_margin_pt$right, plot_margin_pt$bottom, plot_margin_pt$left, unit = "pt")
   )
 
 out_path <- file.path(output_dir, output_file)
 
-ggsave(out_path, p, width = 6, height = 4, device = "pdf")
+# 输出尺寸：宽度严格 84 mm；高度按 tile 数量比例自适应（并留出一定空间给坐标文字）
+width_mm <- 84
+n_x <- nlevels(dat2$omics_batch)
+n_y <- nlevels(dat2$axis)
+height_mm <- width_mm * (n_y / max(1, n_x)) + 10  # +10mm 给旋转 x 轴文字/边距
+
+ggsave(out_path, p, width = width_mm, height = height_mm, units = "mm", device = grDevices::cairo_pdf)
 
 cat("  [OK] 输出图像: ", out_path, "\n", sep = "")
 cat("============================================================\n")

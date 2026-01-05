@@ -29,6 +29,7 @@ suppressPackageStartupMessages({
   library(readr)
   library(ggplot2)
   library(stringr)
+  library(grid)
 })
 
 `%||%` <- function(a, b) if (!is.null(a)) a else b
@@ -51,6 +52,68 @@ if (file.exists(config_path)) {
       " ，将使用脚本内置默认路径。\n", sep = "")
   cfg <- list()
 }
+
+# -------- Global figure style (Nature) --------
+style_path <- "/Volumes/Samsung_SSD_990_PRO_2TB_Media/EphB1/02_protocols/figure_style_nature.yaml"
+if (!file.exists(style_path)) {
+  stop("[ERROR] 找不到 figure style 文件: ", style_path)
+}
+style <- yaml::read_yaml(style_path)
+
+# 线宽（pt）
+line_width_pt <- style$lines$line_width_pt %||% 0.5
+axis_line_pt  <- style$lines$axis_line_default_pt %||% 0.25
+pt_per_lwd     <- style$lines$r_lwd_scale$pt_per_lwd %||% 0.75
+
+# ggplot2 的 linewidth 在不同元素/设备上会有“发丝线”观感差异；
+# 这里采用 box_panel_from_yaml.R 的一致做法：用 pt_per_lwd 将 pt 映射为 lwd/linewidth 标度
+axis_line_lwd <- axis_line_pt / pt_per_lwd
+bar_line_lwd  <- line_width_pt / pt_per_lwd
+
+# 单位换算
+mm_per_inch <- style$units$mm_per_inch %||% 25.4
+mm_to_pt <- function(mm) (72 / mm_per_inch) * mm
+
+# ---- 布局：沿用 box_panel_from_yaml.R 的 axis_outer_frac + axis_gap_pt 逻辑 ----
+style_layout <- style$layout %||% list()
+axis_outer_frac <- style_layout$axis_outer_frac %||% list(
+  left   = 0.01,  # 收紧左侧留白
+  right  = 0.04,
+  bottom = 0.01,  # 明显减少下方留白
+  top    = 0.06
+)
+axis_gap_pt <- style_layout$axis_gap_pt %||% list(
+  x_title_to_ticks = 1,
+  x_ticks_to_axis  = 1,
+  y_title_to_ticks = 3,
+  y_ticks_to_axis  = 2
+)
+
+# 字体与字号（pt）
+font_family <- style$typography$font_family_primary %||% "Helvetica"
+axis_tick_pt  <- style$typography$sizes_pt$axis_tick_default  %||% 5.5
+axis_label_pt <- style$typography$sizes_pt$axis_label_default %||% 6.5
+legend_text_pt  <- style$typography$sizes_pt$legend_text_default  %||% 6
+legend_title_pt <- style$typography$sizes_pt$legend_title_default %||% 6.5
+panel_label_pt  <- style$typography$sizes_pt$panel_label_default %||% 8
+
+# 布局边距（pt）
+plot_margin_pt <- style$layout$plot_margin_pt %||% list(top = 0, right = 0, bottom = 0, left = 0)
+axis_title_margin_pt <- style$layout$axis_title_margin_pt %||% list(x = 3, y = 3)
+
+# 保证从 YAML 读取到的数值都是 length-1 的 numeric（避免 margin() 报错）
+get_num1 <- function(x, default) {
+  if (is.null(x) || length(x) == 0 || all(is.na(x))) return(default)
+  as.numeric(x)[1]
+}
+
+pm_top    <- get_num1(plot_margin_pt$top,    0)
+pm_right  <- get_num1(plot_margin_pt$right,  0)
+pm_bottom <- get_num1(plot_margin_pt$bottom, 0)
+pm_left   <- get_num1(plot_margin_pt$left,   0)
+
+atm_x <- get_num1(axis_title_margin_pt$x, 3)
+atm_y <- get_num1(axis_title_margin_pt$y, 3)
 
 tables_dir       <- cfg$tables_dir       %||% "results/multiomics/tables"
 overall_file     <- cfg$overall_file     %||% "multiomics_axis_Z_overall.tsv"
@@ -139,15 +202,31 @@ y_star_pos <- ifelse(dat$Z_multiomics_overall >= 0,
                      dat$Z_multiomics_overall + y_star_offset,
                      dat$Z_multiomics_overall - y_star_offset)
 
+# 输出尺寸：宽度严格 84 mm；高度按轴数量自适应（与 box_panel_from_yaml.R 一致的布局计算需要用到）
+width_mm <- 84
+n_axis <- nlevels(dat$axis)
+height_mm <- max(30, 6 * n_axis)  # 每个 axis 约 6 mm，下限 30 mm
+
+# 将 axis_outer_frac 换算成 plot.margin 所需的 pt（基于当前 panel 的物理 size）
+frac_or0 <- function(x) if (is.null(x)) 0 else x
+margin_top_mm    <- frac_or0(axis_outer_frac$top)    * height_mm
+margin_bottom_mm <- frac_or0(axis_outer_frac$bottom) * height_mm
+margin_left_mm   <- frac_or0(axis_outer_frac$left)   * width_mm
+margin_right_mm  <- frac_or0(axis_outer_frac$right)  * width_mm
+plot_margin_cfg <- list(
+  top    = mm_to_pt(margin_top_mm),
+  right  = mm_to_pt(margin_right_mm),
+  bottom = mm_to_pt(margin_bottom_mm),
+  left   = mm_to_pt(margin_left_mm)
+)
+
 p <- ggplot(dat, aes(x = axis, y = Z_multiomics_overall)) +
-  geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.3) +
+  geom_hline(yintercept = 0, linetype = "dashed", linewidth = axis_line_lwd, color = "grey50") +
   geom_col(
-    aes(
-      fill = is_main,
-      color = is_main
-    ),
+    fill = "grey60",
+    color = "grey40",
     width = 0.6,
-    linewidth = 0.5
+    linewidth = bar_line_lwd
   ) +
   ## 星号标记
   geom_text(
@@ -156,34 +235,52 @@ p <- ggplot(dat, aes(x = axis, y = Z_multiomics_overall)) +
       y = y_star_pos
     ),
     vjust = ifelse(dat$Z_multiomics_overall >= 0, 0, 1),
-    size = 4,
+    size = legend_text_pt / 2.5,
+    color = "grey20",
     show.legend = FALSE
   ) +
-  scale_fill_manual(
-    values = c(
-      `FALSE` = "grey75",   # 非主角轴：浅灰
-      `TRUE`  = "grey40"    # 主角轴：深灰或可替换为带色
-    )
-  ) +
-  scale_color_manual(
-    values = c(
-      `FALSE` = "grey40",
-      `TRUE`  = "black"     # 主角轴：更明显边框
-    )
-  ) +
   labs(
-    x = "Mechanistic axis",
-    y = "Multi-omics mechanism score (Z)",
-    title = "Figure 6E – Cross-omics mechanistic axis summary",
-    subtitle = "Positive Z: mechanism enhanced in Ephb1−/−; Negative Z: mechanism suppressed"
+    x = NULL,  # 去除横坐标轴标题
+    y = "Axis impairment (Z)",
+    title = NULL,
+    subtitle = NULL
   ) +
-  theme_classic(base_size = 11) +
+  coord_cartesian(clip = "off") +
+  theme_classic(base_size = axis_tick_pt, base_family = font_family) +
   theme(
-    legend.position = "none",
-    axis.text.x = element_text(angle = 30, hjust = 1, vjust = 1)
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(
+      family = font_family,
+      size   = axis_label_pt,
+      margin = margin(r = axis_gap_pt$y_title_to_ticks %||% 0)
+    ),
+    axis.text.x = element_text(
+      angle = 30,
+      hjust = 1,
+      vjust = 1,
+      family = font_family,
+      size   = axis_tick_pt,
+      margin = margin(t = axis_gap_pt$x_ticks_to_axis %||% 0)
+    ),
+    axis.text.y = element_text(
+      family = font_family,
+      size   = axis_tick_pt,
+      margin = margin(r = axis_gap_pt$y_ticks_to_axis %||% 0)
+    ),
+    axis.line  = element_line(linewidth = axis_line_lwd, colour = "black"),
+    axis.ticks = element_line(linewidth = axis_line_lwd, colour = "black"),
+    plot.margin = margin(
+      plot_margin_cfg$top    %||% 0,
+      plot_margin_cfg$right  %||% 0,
+      plot_margin_cfg$bottom %||% 0,
+      plot_margin_cfg$left   %||% 0
+    )
   )
 
-ggsave(out_plot_path, p, width = 5.5, height = 3.8)
+
+ggsave(out_plot_path, p,
+       width = width_mm, height = height_mm,
+       units = "mm", device = grDevices::cairo_pdf)
 
 cat("[OK] 成功输出图像: ", out_plot_path, "\n", sep = "")
 cat("============================================================\n")

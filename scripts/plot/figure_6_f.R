@@ -21,6 +21,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(broom)
   library(patchwork)
+  library(grid)
 })
 
 ## ---------------- 1. 读取命令行参数 & 配置 ------------------
@@ -33,7 +34,64 @@ config_path <- args[1]
 cat("[INFO] 使用配置文件: ", config_path, "\n", sep = "")
 
 cfg <- yaml::read_yaml(config_path)
+# ---------------- Global figure style (Nature) ----------------
+style_path <- "/Volumes/Samsung_SSD_990_PRO_2TB_Media/EphB1/02_protocols/figure_style_nature.yaml"
+if (!file.exists(style_path)) {
+  stop("[ERROR] 找不到 figure style 文件: ", style_path)
+}
+style <- yaml::read_yaml(style_path)
 
+
+get_num1 <- function(x, default) {
+  if (is.null(x) || length(x) == 0 || all(is.na(x))) return(default)
+  as.numeric(x)[1]
+}
+
+# NULL-coalescing operator (avoid requiring rlang)
+`%||%` <- function(a, b) if (!is.null(a)) a else b
+
+# Fonts
+font_family <- style$typography$font_family_primary %||% "Helvetica"
+
+# Sizes (pt)
+axis_tick_pt    <- get_num1(style$typography$sizes_pt$axis_tick_default, 5.5)
+axis_label_pt   <- get_num1(style$typography$sizes_pt$axis_label_default, 6.5)
+legend_text_pt  <- get_num1(style$typography$sizes_pt$legend_text_default, 6)
+legend_title_pt <- get_num1(style$typography$sizes_pt$legend_title_default, 6.5)
+
+# Lines (pt)
+axis_line_pt   <- get_num1(style$lines$axis_line_default_pt, 0.25)
+major_grid_pt  <- get_num1(style$lines$major_grid_default_pt, 0.35)
+minor_grid_pt  <- get_num1(style$lines$minor_grid_default_pt, 0.25)
+
+# pt -> lwd for ggplot linewidth (align with box_panel_from_yaml.R)
+pt_per_lwd <- 0.75 # 1 lwd = 0.75 pt
+pt_to_lwd <- function(pt) pt / pt_per_lwd
+axis_line_lwd   <- pt_to_lwd(axis_line_pt)
+major_grid_lwd  <- pt_to_lwd(major_grid_pt)
+minor_grid_lwd  <- pt_to_lwd(minor_grid_pt)
+
+# Colors
+col_dir_match <- style$colors$dir_match %||% list(match="#B2182B", mismatch="grey40", unknown="black")
+col_strip_bg  <- style$colors$strip_background %||% "grey90"
+col_grid_major<- style$colors$grid_major %||% "grey85"
+col_grid_minor<- style$colors$grid_minor %||% "grey92"
+
+# Layout
+legend_pos <- style$layout$legend_position_default %||% "bottom"
+plot_margin_pt <- style$layout$plot_margin_pt %||% list(top=0, right=0, bottom=0, left=0)
+pm_top    <- get_num1(plot_margin_pt$top, 0)
+pm_right  <- get_num1(plot_margin_pt$right, 0)
+pm_bottom <- get_num1(plot_margin_pt$bottom, 0)
+pm_left   <- get_num1(plot_margin_pt$left, 0)
+
+# Marks
+point_size_mm     <- get_num1(style$marks$point_size, 1.6)
+smooth_line_pt    <- get_num1(style$marks$smooth_line_width_pt, 0.5)
+smooth_line_lwd   <- pt_to_lwd(smooth_line_pt)
+smooth_se_alpha   <- get_num1(style$marks$smooth_se_alpha, 0.15)
+facet_strip_text_pt <- get_num1(style$marks$facet_strip_text_pt, legend_text_pt)
+stat_label_text_pt  <- get_num1(style$marks$stat_label_text_pt, legend_text_pt)
 ## 期望的 YAML 结构示例：
 ## data_files:
 ##   axis_effects_matrix: "results/multiomics/mechanistic_axis_effects_matrix.tsv"
@@ -96,10 +154,56 @@ transform_y_mode <- get_cfg(cfg, "transform_y", "mode", default = "none")
 width_cfg  <- get_cfg(cfg, "plot_size", "width",  default = 8)
 height_cfg <- get_cfg(cfg, "plot_size", "height", default = 6)
 
-# full 图（每个 phenotype 单独图）的尺寸，可以单独配置；
-# 默认比主图更窄一些，便于论文版面排版（例如单栏图）。
-full_width_cfg  <- get_cfg(cfg, "plot_size", "full_width",  default = width_cfg / 2)
-full_height_cfg <- get_cfg(cfg, "plot_size", "full_height", default = height_cfg)
+# Main figure size: strict single-column width (84 mm). Height defaults to YAML inches converted to mm.
+width_mm_main  <- get_cfg(cfg, "plot_size", "width_mm",  default = 84)
+height_mm_main <- get_cfg(cfg, "plot_size", "height_mm", default = height_cfg * 25.4)
+
+# 强制单栏宽度为 84 mm（忽略 config 中可能的误设），并转换为英寸用于 device 尺寸锁定
+width_mm_main <- 84
+width_in_main  <- width_mm_main / 25.4
+height_in_main <- height_mm_main / 25.4
+cat(sprintf("[INFO] Main plot size locked: %.2f mm (%.4f in) × %.2f mm (%.4f in)\n",
+            width_mm_main, width_in_main, height_mm_main, height_in_main))
+
+# After rendering, enforce PDF CropBox/MediaBox to exact dimensions (points)
+mm_to_pt <- function(mm) mm * 72 / 25.4
+page_w_pt <- mm_to_pt(width_mm_main)
+page_h_pt <- mm_to_pt(height_mm_main)
+
+fix_pdf_boxes <- function(pdf_path, w_pt, h_pt) {
+  # Use Ghostscript if available to force an exact page size/crop box.
+  gs_bin <- Sys.which("gs")
+  if (!nzchar(gs_bin)) return(invisible(FALSE))
+
+  tmp_out <- paste0(pdf_path, ".tmp.pdf")
+  args <- c(
+    "-o", tmp_out,
+    "-sDEVICE=pdfwrite",
+    "-dSAFER",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-dUseCropBox",
+    sprintf("-dDEVICEWIDTHPOINTS=%.2f", w_pt),
+    sprintf("-dDEVICEHEIGHTPOINTS=%.2f", h_pt),
+    "-dPDFFitPage",
+    pdf_path
+  )
+  system2(gs_bin, args = args)
+  if (file.exists(tmp_out) && file.info(tmp_out)$size > 0) {
+    ok <- file.rename(tmp_out, pdf_path)
+    return(invisible(isTRUE(ok)))
+  }
+  invisible(FALSE)
+}
+
+# full 图（每个 phenotype 单独图）的尺寸：同样锁定为单栏宽 84 mm；高度可单独配置。
+full_width_mm  <- get_cfg(cfg, "plot_size", "full_width_mm",  default = 84)
+full_height_mm <- get_cfg(cfg, "plot_size", "full_height_mm", default = full_width_mm * 1.25)  # 默认给一个相对合理的纵横比
+
+# 强制单栏宽度 84 mm
+full_width_mm <- 84
+full_width_in  <- full_width_mm / 25.4
+full_height_in <- full_height_mm / 25.4
 
 ## ---------------- 2. 读取数据表 -----------------------------
 
@@ -404,12 +508,14 @@ if (!is.null(out_full_pdf) || !is.null(out_full_png)) {
         dplyr::filter(phenotype == pheno_name)
 
       ggplot(df, aes(x = combined_z, y = .data[[y_var_full]])) +
-        geom_point() +
+        geom_point(size = point_size_mm) +
         geom_smooth(
           method = "lm",
           se = TRUE,
           aes(color = dir_match),
-          show.legend = TRUE
+          show.legend = TRUE,
+          linewidth = smooth_line_lwd,
+          alpha = smooth_se_alpha
         ) +
         facet_grid(axis ~ ., scales = "free") +
         geom_text(
@@ -420,13 +526,13 @@ if (!is.null(out_full_pdf) || !is.null(out_full_png)) {
           ),
           hjust = -0.1, vjust = 1.1,
           inherit.aes = FALSE,
-          size = 3
+          size = stat_label_text_pt / ggplot2::.pt
         ) +
         scale_color_manual(
           values = c(
-            match    = "red",
-            mismatch = "grey40",
-            unknown  = "black"
+            match    = col_dir_match$match,
+            mismatch = col_dir_match$mismatch,
+            unknown  = col_dir_match$unknown
           )
         ) +
         labs(
@@ -435,11 +541,27 @@ if (!is.null(out_full_pdf) || !is.null(out_full_png)) {
           y = y_lab_full,
           color = "Direction match"
         ) +
-        theme_bw() +
+        theme_bw(base_size = axis_tick_pt, base_family = font_family) +
         theme(
-          strip.background = element_rect(fill = "grey90"),
-          panel.grid = element_line(size = 0.2),
-          legend.position = "bottom"
+          strip.background = element_rect(fill = col_strip_bg, color = NA),
+          strip.text = element_text(size = facet_strip_text_pt, family = font_family),
+
+          panel.grid.major = element_line(linewidth = major_grid_lwd, color = col_grid_major),
+          panel.grid.minor = element_line(linewidth = minor_grid_lwd, color = col_grid_minor),
+
+          axis.line  = element_line(linewidth = axis_line_lwd, color = "black"),
+          axis.ticks = element_line(linewidth = axis_line_lwd, color = "black"),
+
+          axis.text.x  = element_text(size = axis_tick_pt, family = font_family),
+          axis.text.y  = element_text(size = axis_tick_pt, family = font_family),
+          axis.title.x = element_text(size = axis_label_pt, family = font_family),
+          axis.title.y = element_text(size = axis_label_pt, family = font_family),
+
+          legend.position = legend_pos,
+          legend.title = element_text(size = legend_title_pt, family = font_family),
+          legend.text  = element_text(size = legend_text_pt,  family = font_family),
+
+          plot.margin = margin(pm_top, pm_right, pm_bottom, pm_left, unit = "pt")
         )
     })
 
@@ -462,15 +584,26 @@ if (!is.null(out_full_pdf) || !is.null(out_full_png)) {
     file_base <- file.path(out_full_dir, paste0("figure_6_f_full_", pheno_safe))
 
     if (!is.null(out_full_pdf)) {
-      ggsave(paste0(file_base, ".pdf"), p_single,
-             width  = full_width_cfg,
-             height = full_height_cfg,
-             units  = "in")
+      out_pdf_single <- paste0(file_base, ".pdf")
+      grDevices::cairo_pdf(
+        file   = out_pdf_single,
+        width  = full_width_in,
+        height = full_height_in,
+        family = font_family
+      )
+      print(p_single)
+      dev.off()
+
+      # enforce exact page boxes for Illustrator placement
+      fixed_full <- fix_pdf_boxes(out_pdf_single, mm_to_pt(full_width_mm), mm_to_pt(full_height_mm))
+      if (!isTRUE(fixed_full)) {
+        cat("[WARN] full PDF: could not enforce CropBox/MediaBox (gs not found): ", out_pdf_single, "\n", sep = "")
+      }
     }
     if (!is.null(out_full_png)) {
       ggsave(paste0(file_base, ".png"), p_single,
-             width  = full_width_cfg,
-             height = full_height_cfg,
+             width  = full_width_in,
+             height = full_height_in,
              units  = "in", dpi = 300)
     }
   })
@@ -484,13 +617,15 @@ plot_data <- plot_data %>%
   )
 
 p <- ggplot(plot_data, aes(x = combined_z, y = .data[[y_var]])) +
-  geom_point() +
+  geom_point(size = point_size_mm) +
   ## 用 dir_match 映射颜色（match/mismatch/unknown），可以在 scale_color_manual 里自定义
   geom_smooth(
     method = "lm",
     se = TRUE,
     aes(color = dir_match),
-    show.legend = TRUE
+    show.legend = TRUE,
+    linewidth = smooth_line_lwd,
+    alpha = smooth_se_alpha
   ) +
   facet_grid(axis ~ phenotype, scales = "free") +
   ## 在每个 panel 右上角写 r, p
@@ -502,13 +637,13 @@ p <- ggplot(plot_data, aes(x = combined_z, y = .data[[y_var]])) +
     ),
     hjust = -0.1, vjust = 1.1,
     inherit.aes = FALSE,
-    size = 3
+    size = stat_label_text_pt / ggplot2::.pt
   ) +
   scale_color_manual(
     values = c(
-      match    = "red",
-      mismatch = "grey40",
-      unknown  = "black"
+      match    = col_dir_match$match,
+      mismatch = col_dir_match$mismatch,
+      unknown  = col_dir_match$unknown
     )
   ) +
   labs(
@@ -516,17 +651,57 @@ p <- ggplot(plot_data, aes(x = combined_z, y = .data[[y_var]])) +
     y = y_lab,
     color = "Direction match"
   ) +
-  theme_bw() +
+  theme_bw(base_size = axis_tick_pt, base_family = font_family) +
   theme(
-    strip.background = element_rect(fill = "grey90"),
-    panel.grid = element_line(size = 0.2),
-    legend.position = "bottom"
+    strip.background = element_rect(fill = col_strip_bg, color = NA),
+    strip.text = element_text(size = facet_strip_text_pt, family = font_family),
+
+    panel.grid.major = element_line(linewidth = major_grid_lwd, color = col_grid_major),
+    panel.grid.minor = element_line(linewidth = minor_grid_lwd, color = col_grid_minor),
+
+    axis.line  = element_line(linewidth = axis_line_lwd, color = "black"),
+    axis.ticks = element_line(linewidth = axis_line_lwd, color = "black"),
+
+    axis.text.x  = element_text(size = axis_tick_pt, family = font_family),
+    axis.text.y  = element_text(size = axis_tick_pt, family = font_family),
+    axis.title.x = element_text(size = axis_label_pt, family = font_family),
+    axis.title.y = element_text(size = axis_label_pt, family = font_family),
+
+    legend.position = legend_pos,
+    legend.title = element_text(size = legend_title_pt, family = font_family),
+    legend.text  = element_text(size = legend_text_pt,  family = font_family),
+
+    plot.margin = margin(pm_top, pm_right, pm_bottom, pm_left, unit = "pt")
   )
 
 ## ---------------- 12. 保存图像和统计结果 -------------------
 
-ggsave(out_pdf, p, width = width_cfg, height = height_cfg, units = "in")
-ggsave(out_png, p, width = width_cfg, height = height_cfg, units = "in", dpi = 300)
+
+## ---- 导出 PDF（cairo_pdf + print）----
+dir.create(dirname(out_pdf), showWarnings = FALSE, recursive = TRUE)
+grDevices::cairo_pdf(
+  file   = out_pdf,
+  width  = width_in_main,
+  height = height_in_main,
+  family = font_family
+)
+print(p)
+dev.off()
+
+# Enforce page boxes for Illustrator placement
+fixed <- fix_pdf_boxes(out_pdf, page_w_pt, page_h_pt)
+if (isTRUE(fixed)) {
+  cat(sprintf("[INFO] PDF boxes fixed to %.2f×%.2f pt (%.2f×%.2f mm)\n",
+              page_w_pt, page_h_pt, width_mm_main, height_mm_main))
+} else {
+  cat("[WARN] Could not enforce PDF CropBox/MediaBox (gs not found). PDF is still vector; Illustrator may place by bounding box.\n")
+}
+
+## ---- 导出 PNG（用于快速预览）----
+dir.create(dirname(out_png), showWarnings = FALSE, recursive = TRUE)
+ggsave(out_png, p,
+       width = width_in_main, height = height_in_main,
+       units = "in", dpi = 300)
 
 if (!is.null(out_stats_tsv)) {
   dir.create(dirname(out_stats_tsv), showWarnings = FALSE, recursive = TRUE)
