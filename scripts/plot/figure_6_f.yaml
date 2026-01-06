@@ -22,16 +22,23 @@ axis_phenotype_map:
     - "sum_CL"
   Oxidation:
     - "oxCL_CL_ratio"
+    - "sum_CL"
   Supply:
     - "sum_PA"
+    - "sum_CL"
   Membrane context:
     - "CL_fraction"
     - "mito_lipid_mass"
+    - "sum_CL"
+    - "sum_PG"
+    - "sum_PC"
   Remodeling:
     - "MLCL_CL_ratio"
+    - "sum_CL"
   Transport:
     - "PA_CL_mismatch"
     - "PA_PG_mismatch"
+    - "sum_CL"
 
 
 output:

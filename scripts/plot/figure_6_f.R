@@ -50,6 +50,9 @@ get_num1 <- function(x, default) {
 # NULL-coalescing operator (avoid requiring rlang)
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
+# Unit helpers
+mm_to_pt <- function(mm) mm * 72 / 25.4
+
 # Fonts
 font_family <- style$typography$font_family_primary %||% "Helvetica"
 
@@ -80,10 +83,14 @@ col_grid_minor<- style$colors$grid_minor %||% "grey92"
 # Layout
 legend_pos <- style$layout$legend_position_default %||% "bottom"
 plot_margin_pt <- style$layout$plot_margin_pt %||% list(top=0, right=0, bottom=0, left=0)
-pm_top    <- get_num1(plot_margin_pt$top, 0)
-pm_right  <- get_num1(plot_margin_pt$right, 0)
-pm_bottom <- get_num1(plot_margin_pt$bottom, 0)
-pm_left   <- get_num1(plot_margin_pt$left, 0)
+# Enforce a minimum top margin (pt) to avoid PDF top overflow even when YAML sets 0
+pm_top_raw <- get_num1(plot_margin_pt$top, 0)
+pm_top <- max(pm_top_raw, 8)
+pm_right  <- get_num1(plot_margin_pt$right, 0.01)
+pm_bottom <- get_num1(plot_margin_pt$bottom, 0.01)
+# Enforce a minimum left margin (pt) to avoid PDF glyph overflow even when YAML sets 0
+pm_left_raw <- get_num1(plot_margin_pt$left, 0)
+pm_left <- max(pm_left_raw, 8)
 
 # Marks
 point_size_mm     <- get_num1(style$marks$point_size, 1.6)
@@ -92,6 +99,7 @@ smooth_line_lwd   <- pt_to_lwd(smooth_line_pt)
 smooth_se_alpha   <- get_num1(style$marks$smooth_se_alpha, 0.15)
 facet_strip_text_pt <- get_num1(style$marks$facet_strip_text_pt, legend_text_pt)
 stat_label_text_pt  <- get_num1(style$marks$stat_label_text_pt, legend_text_pt)
+stat_label_pad_pt <- get_num1(style$marks$stat_label_pad_pt, 1.5)
 ## 期望的 YAML 结构示例：
 ## data_files:
 ##   axis_effects_matrix: "results/multiomics/mechanistic_axis_effects_matrix.tsv"
@@ -145,6 +153,19 @@ out_stats_tsv <- get_cfg(cfg, "output", "stats_tsv", default = NULL)
 out_full_pdf <- get_cfg(cfg, "output", "full_pdf", default = "results/figs/figure_6_f_full/figure_6_f_full.pdf")
 out_full_png <- get_cfg(cfg, "output", "full_png", default = "results/figs/figure_6_f_full/figure_6_f_full.png")
 
+# Per (phenotype × axis) outputs
+out_pair_dir <- get_cfg(cfg, "output", "pair_dir", default = file.path(dirname(out_pdf), "figure_6_f_pairs"))
+out_pair_pdf <- get_cfg(cfg, "output", "pair_pdf", default = TRUE)
+out_pair_png <- get_cfg(cfg, "output", "pair_png", default = TRUE)
+
+pair_height_mm <- get_cfg(cfg, "plot_size", "pair_height_mm", default = 65)
+# width is always strict 84 mm
+pair_width_mm <- 84
+pair_width_in <- pair_width_mm / 25.4
+pair_height_in <- pair_height_mm / 25.4
+pair_w_pt <- mm_to_pt(pair_width_mm)
+pair_h_pt <- mm_to_pt(pair_height_mm)
+
 layout_nrow <- get_cfg(cfg, "layout", "nrow", default = NULL)
 layout_ncol <- get_cfg(cfg, "layout", "ncol", default = NULL)
 
@@ -166,7 +187,6 @@ cat(sprintf("[INFO] Main plot size locked: %.2f mm (%.4f in) × %.2f mm (%.4f in
             width_mm_main, width_in_main, height_mm_main, height_in_main))
 
 # After rendering, enforce PDF CropBox/MediaBox to exact dimensions (points)
-mm_to_pt <- function(mm) mm * 72 / 25.4
 page_w_pt <- mm_to_pt(width_mm_main)
 page_h_pt <- mm_to_pt(height_mm_main)
 
@@ -360,7 +380,7 @@ if (is.null(axis_pheno_map)) {
 
 ## 7.1 全部 axis_indicator_pairs_all 与 axis_combined 和 lipid_de_filt 连接，准备计算统计量
 full_data <- axis_indicator_pairs_all %>%
-  left_join(axis_combined, by = "axis") %>%
+  left_join(axis_combined, by = "axis", relationship = "many-to-many") %>%
   left_join(lipid_de_filt, by = c("batch", "phenotype" = "indicator"))
 
 ## 7.2 过滤 NA
@@ -404,6 +424,47 @@ calc_cor <- function(x, y, method = "pearson") {
     tibble(r = NA_real_, p = NA_real_)
   })
   out
+}
+# Helper: compute label positions at the top-left panel corner (inside ggplot's default expansion)
+make_label_pos <- function(df, y_col, group_cols) {
+  if (length(group_cols) == 0) {
+    xmin <- min(df$combined_z, na.rm = TRUE)
+    xmax <- max(df$combined_z, na.rm = TRUE)
+    ymin <- min(df[[y_col]], na.rm = TRUE)
+    ymax <- max(df[[y_col]], na.rm = TRUE)
+    xr <- (xmax - xmin)
+    yr <- (ymax - ymin)
+    # Approximate ggplot2 default scale expansion (5%) and place label slightly INSIDE the panel
+    if (!is.finite(xr) || xr == 0) xr <- 1
+    if (!is.finite(yr) || yr == 0) yr <- 1
+    x_min_panel <- xmin - 0.05 * xr
+    y_max_panel <- ymax + 0.05 * yr
+    return(tibble(
+      x_pos = x_min_panel + 0.01 * xr,
+      y_pos = y_max_panel - 0.01 * yr
+    ))
+  }
+
+  df %>%
+    dplyr::group_by(dplyr::across(dplyr::all_of(group_cols))) %>%
+    dplyr::summarise(
+      xmin = min(combined_z, na.rm = TRUE),
+      xmax = max(combined_z, na.rm = TRUE),
+      ymin = min(.data[[y_col]], na.rm = TRUE),
+      ymax = max(.data[[y_col]], na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      xr = (xmax - xmin),
+      yr = (ymax - ymin),
+      xr = ifelse(!is.finite(xr) | xr == 0, 1, xr),
+      yr = ifelse(!is.finite(yr) | yr == 0, 1, yr),
+      x_min_panel = xmin - 0.05 * xr,
+      y_max_panel = ymax + 0.05 * yr,
+      x_pos = x_min_panel + 0.01 * xr,
+      y_pos = y_max_panel - 0.01 * yr
+    ) %>%
+    dplyr::select(-xr, -yr, -x_min_panel, -y_max_panel)
 }
 
 stats_df_all <- full_data %>%
@@ -457,7 +518,7 @@ full_plot_data <- full_data %>%
 
 ## 10.1 只用 axis_indicator_pairs_plot 过滤 full_data 作为绘图数据
 plot_data <- axis_indicator_pairs_plot %>%
-  left_join(axis_combined, by = "axis") %>%
+  left_join(axis_combined, by = "axis", relationship = "many-to-many") %>%
   left_join(lipid_de_filt, by = c("batch", "phenotype" = "indicator")) %>%
   filter(!is.na(combined_z), !is.na(diff_HO_WT))
 
@@ -465,9 +526,7 @@ plot_data <- axis_indicator_pairs_plot %>%
 stats_df_plot <- stats_df_all %>%
   semi_join(axis_indicator_pairs_plot, by = c("axis", "phenotype"))
 
-## 10.3 将 stats_df_plot 合并到 plot_data，用于 panel 标签和颜色映射
-plot_data <- plot_data %>%
-  left_join(stats_df_plot, by = c("axis", "phenotype"))
+## 10.3 注意：label 位置需要在 y_var 确定后再计算；此处先不合并到 plot_data
 
 ## ---------------- 11. 可选：对 y 做标准化（按 phenotype）-------------------
 
@@ -493,6 +552,10 @@ if (!is.null(transform_y_mode) && identical(transform_y_mode, "z_by_indicator"))
   }
 }
 
+# ---- Merge stats into plot_data (labels will be anchored to panel corner via -Inf/Inf) ----
+plot_data <- plot_data %>%
+  left_join(stats_df_plot, by = c("axis", "phenotype"))
+
 ## ---------------- 11. 画图 -----------------------------------
 
 ## 如配置要求，先输出“全轴全指标”补充图：
@@ -506,28 +569,25 @@ if (!is.null(out_full_pdf) || !is.null(out_full_png)) {
       # 对应 phenotype 的统计结果（r, p, slope 等）
       stats_sub <- stats_df_all %>%
         dplyr::filter(phenotype == pheno_name)
-
       ggplot(df, aes(x = combined_z, y = .data[[y_var_full]])) +
         geom_point(size = point_size_mm) +
         geom_smooth(
           method = "lm",
           se = TRUE,
           aes(color = dir_match),
-          show.legend = TRUE,
+          show.legend = FALSE,
           linewidth = smooth_line_lwd,
           alpha = smooth_se_alpha
         ) +
-        facet_grid(axis ~ ., scales = "free") +
         geom_text(
           data = stats_sub,
-          aes(
-            x = -Inf, y = Inf,
-            label = label
-          ),
-          hjust = -0.1, vjust = 1.1,
+          aes(x = -Inf, y = Inf, label = label),
           inherit.aes = FALSE,
-          size = stat_label_text_pt / ggplot2::.pt
+          hjust = -0.05, vjust = 1.05,
+          size = stat_label_text_pt / ggplot2::.pt,
+          family = font_family
         ) +
+        facet_grid(axis ~ ., scales = "free") +
         scale_color_manual(
           values = c(
             match    = col_dir_match$match,
@@ -539,7 +599,7 @@ if (!is.null(out_full_pdf) || !is.null(out_full_png)) {
           title = pheno_name,
           x = "Multi-omics mechanistic axis effect (HO vs WT, combined Z)",
           y = y_lab_full,
-          color = "Direction match"
+          color = NULL
         ) +
         theme_bw(base_size = axis_tick_pt, base_family = font_family) +
         theme(
@@ -555,14 +615,17 @@ if (!is.null(out_full_pdf) || !is.null(out_full_png)) {
           axis.text.x  = element_text(size = axis_tick_pt, family = font_family),
           axis.text.y  = element_text(size = axis_tick_pt, family = font_family),
           axis.title.x = element_text(size = axis_label_pt, family = font_family),
-          axis.title.y = element_text(size = axis_label_pt, family = font_family),
+          axis.title.y = element_text(
+            size = axis_label_pt,
+            family = font_family,
+            margin = margin(r = 2, unit = "pt")
+          ),
 
-          legend.position = legend_pos,
-          legend.title = element_text(size = legend_title_pt, family = font_family),
-          legend.text  = element_text(size = legend_text_pt,  family = font_family),
+          legend.position = "none",
 
           plot.margin = margin(pm_top, pm_right, pm_bottom, pm_left, unit = "pt")
         )
+      # geom_text labels are now added; return the plot directly
     })
 
   # 目标输出目录：优先使用 out_full_pdf/out_full_png 的目录，否则默认 results/figs/figure_6_f_full
@@ -623,22 +686,19 @@ p <- ggplot(plot_data, aes(x = combined_z, y = .data[[y_var]])) +
     method = "lm",
     se = TRUE,
     aes(color = dir_match),
-    show.legend = TRUE,
+    show.legend = FALSE,
     linewidth = smooth_line_lwd,
     alpha = smooth_se_alpha
   ) +
-  facet_grid(axis ~ phenotype, scales = "free") +
-  ## 在每个 panel 右上角写 r, p
   geom_text(
     data = stats_df_plot,
-    aes(
-      x = -Inf, y = Inf,
-      label = label
-    ),
-    hjust = -0.1, vjust = 1.1,
+    aes(x = -Inf, y = Inf, label = label),
     inherit.aes = FALSE,
-    size = stat_label_text_pt / ggplot2::.pt
+    hjust = -0.05, vjust = 1.05,
+    size = stat_label_text_pt / ggplot2::.pt,
+    family = font_family
   ) +
+  facet_grid(axis ~ phenotype, scales = "free") +
   scale_color_manual(
     values = c(
       match    = col_dir_match$match,
@@ -647,9 +707,9 @@ p <- ggplot(plot_data, aes(x = combined_z, y = .data[[y_var]])) +
     )
   ) +
   labs(
-    x = "Multi-omics mechanistic axis effect (HO vs WT, combined Z)",
+    x = "Mechanistic axis effect (HO vs WT, Z)",
     y = y_lab,
-    color = "Direction match"
+    color = NULL
   ) +
   theme_bw(base_size = axis_tick_pt, base_family = font_family) +
   theme(
@@ -665,11 +725,13 @@ p <- ggplot(plot_data, aes(x = combined_z, y = .data[[y_var]])) +
     axis.text.x  = element_text(size = axis_tick_pt, family = font_family),
     axis.text.y  = element_text(size = axis_tick_pt, family = font_family),
     axis.title.x = element_text(size = axis_label_pt, family = font_family),
-    axis.title.y = element_text(size = axis_label_pt, family = font_family),
+    axis.title.y = element_text(
+      size = axis_label_pt,
+      family = font_family,
+      margin = margin(r = 2, unit = "pt")
+    ),
 
-    legend.position = legend_pos,
-    legend.title = element_text(size = legend_title_pt, family = font_family),
-    legend.text  = element_text(size = legend_text_pt,  family = font_family),
+    legend.position = "none",
 
     plot.margin = margin(pm_top, pm_right, pm_bottom, pm_left, unit = "pt")
   )
@@ -702,6 +764,101 @@ dir.create(dirname(out_png), showWarnings = FALSE, recursive = TRUE)
 ggsave(out_png, p,
        width = width_in_main, height = height_in_main,
        units = "in", dpi = 300)
+
+## ---- 额外输出：每个 phenotype × axis 单独一张图 ----
+if (isTRUE(out_pair_pdf) || isTRUE(out_pair_png)) {
+  dir.create(out_pair_dir, showWarnings = FALSE, recursive = TRUE)
+  cat("[INFO] Exporting per-pair plots to: ", out_pair_dir, "\n", sep = "")
+
+  # Unique pairs that actually have data
+  pair_keys <- plot_data %>%
+    distinct(axis, phenotype)
+
+  purrr::pwalk(pair_keys, function(axis, phenotype) {
+    df_pair <- plot_data %>% filter(.data$axis == !!axis, .data$phenotype == !!phenotype)
+    st_pair <- stats_df_plot %>% filter(.data$axis == !!axis, .data$phenotype == !!phenotype)
+
+    if (nrow(df_pair) == 0) return(invisible(NULL))
+
+    axis_chr <- as.character(axis)
+    pheno_chr <- as.character(phenotype)
+
+    y_lab_pair <- paste0(axis_chr, " – ", pheno_chr, " (HO - WT)")
+    # Per-pair: anchor label to panel corner
+    p_pair <- ggplot(df_pair, aes(x = combined_z, y = .data[[y_var]])) +
+      geom_point(size = point_size_mm) +
+      geom_smooth(
+        method = "lm",
+        se = TRUE,
+        aes(color = dir_match),
+        show.legend = FALSE,
+        linewidth = smooth_line_lwd,
+        alpha = smooth_se_alpha
+      ) +
+      geom_text(
+        data = st_pair,
+        aes(x = -Inf, y = Inf, label = label),
+        inherit.aes = FALSE,
+        hjust = -0.05, vjust = 1.05,
+        size = stat_label_text_pt / ggplot2::.pt,
+        family = font_family
+      ) +
+      scale_color_manual(
+        values = c(
+          match    = col_dir_match$match,
+          mismatch = col_dir_match$mismatch,
+          unknown  = col_dir_match$unknown
+        )
+      ) +
+      labs(
+        x = "Mechanistic axis effect (HO vs WT, Z)",
+        y = y_lab_pair,
+        color = NULL
+      ) +
+      theme_bw(base_size = axis_tick_pt, base_family = font_family) +
+      theme(
+        panel.grid.major = element_line(linewidth = major_grid_lwd, color = col_grid_major),
+        panel.grid.minor = element_line(linewidth = minor_grid_lwd, color = col_grid_minor),
+
+        axis.line  = element_line(linewidth = axis_line_lwd, color = "black"),
+        axis.ticks = element_line(linewidth = axis_line_lwd, color = "black"),
+
+        axis.text.x  = element_text(size = axis_tick_pt, family = font_family),
+        axis.text.y  = element_text(size = axis_tick_pt, family = font_family),
+        axis.title.x = element_text(size = axis_label_pt, family = font_family),
+        axis.title.y = element_text(
+          size = axis_label_pt,
+          family = font_family,
+          margin = margin(r = 2, unit = "pt")
+        ),
+
+        legend.position = "none",
+
+        plot.margin = margin(pm_top, pm_right, pm_bottom, pm_left, unit = "pt")
+      )
+
+    ax_safe <- stringr::str_replace_all(axis_chr, "[^A-Za-z0-9_]+", "_")
+    ph_safe <- stringr::str_replace_all(pheno_chr, "[^A-Za-z0-9_]+", "_")
+    file_base <- file.path(out_pair_dir, paste0("figure_6_f_", ph_safe, "__", ax_safe))
+
+    if (isTRUE(out_pair_pdf)) {
+      out_pdf_pair <- paste0(file_base, ".pdf")
+      grDevices::cairo_pdf(file = out_pdf_pair, width = pair_width_in, height = pair_height_in, family = font_family)
+      print(p_pair)
+      dev.off()
+
+      fixed_pair <- fix_pdf_boxes(out_pdf_pair, pair_w_pt, pair_h_pt)
+      if (!isTRUE(fixed_pair)) {
+        cat("[WARN] pair PDF: could not enforce CropBox/MediaBox (gs not found): ", out_pdf_pair, "\n", sep = "")
+      }
+    }
+
+    if (isTRUE(out_pair_png)) {
+      out_png_pair <- paste0(file_base, ".png")
+      ggsave(out_png_pair, p_pair, width = pair_width_in, height = pair_height_in, units = "in", dpi = 300)
+    }
+  })
+}
 
 if (!is.null(out_stats_tsv)) {
   dir.create(dirname(out_stats_tsv), showWarnings = FALSE, recursive = TRUE)
