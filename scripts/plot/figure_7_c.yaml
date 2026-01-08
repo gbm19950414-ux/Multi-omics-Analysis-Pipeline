@@ -1,0 +1,26 @@
+# figure_7_c.yaml
+
+# 输入表
+ephb1_downstream_scores_per_batch: "results/multiomics/tables/ephb1_downstream_signaling_scores_per_batch.tsv"
+
+# 输出目录
+plots_dir: "results/figs"
+
+# 样式（你之前要求引用的 Nature 样式）
+style_yaml: "/Volumes/Samsung_SSD_990_PRO_2TB_Media/EphB1/02_protocols/figure_style_nature.yaml"
+
+# 单栏宽度上限（脚本内部也会强制 min(..., 84)）
+max_width_mm: 84
+
+# 通路重命名：旧名: 新名
+pathway_rename:
+
+  "EphB1_AMPK_energy_sensing": "AMPK energy sensing"
+  "EphB1_JAK_STAT_inflammatory": "JAK–STAT signaling"
+  "EphB1_MAPK_ERK_p38_JNK": "MAPK (ERK/p38/JNK)"
+  "EphB1_NFkB_inflammation_ROS": "NF-κB / ROS"
+  "EphB1_PGC1_NRF_mito_biogenesis": "PGC-1 / NRF mitochondrial biogenesis"
+  "EphB1_PI3K_AKT_mTOR": "PI3K–AKT–mTOR signaling"
+  "EphB1_cytoskeleton_FAQ_Src_Rho": "Cytoskeleton (FAK–Src–Rho)"
+  "EphB1_integrin_caveolae_membrane_microdomain": "Integrin / caveolae microdomains"
+  "EphB1_mito_stress_cell_death": "Mitochondrial stress & cell death"
