@@ -191,33 +191,74 @@ axes:
 
   Membrane context:
     description: >
-      线粒体嵴 / cristae 结构、MICOS 复合体与 OPA1/OMA1 平衡等，决定
-      CL-rich 区域在内膜上的空间组织和膜环境，对 CL 功能起到“膜场景”修饰作用。
+      膜磷脂库缩水（PC/PE/PI/PS/PG/CL 共同下降）+ TG 上升，常由“合成/供给通量受限”
+      驱动：包括 de novo 脂肪酸与甘油骨架供给、ER 侧磷脂合成节点，以及线粒体侧 CDP-DAG→PG/CL
+      分支的前体通量。该轴用于检验“合成/供给不足是否为主要障碍来源”。
     modules:
 
       gene_set:
-        label: "Transcriptomic gene set for Membrane context axis"
+        label: "Transcriptomic gene set for Flux limitation axis"
         description: >
-          从 figure_6_b.xlsx 中 feature_type = "gene" 且 axis = "Membrane context" 的行自动生成。
+          手工构建：覆盖脂肪酸与甘油骨架供给、Kennedy pathway（PC/PE）、CDP-DAG branch（PI/PG/CL）
+          以及 PS 合成/交换等关键瓶颈节点。分数高=障碍重，因此能力基因取 -1。
         genes:
-          - name: Opa1
+          # de novo FA synthesis / acetyl-CoA → malonyl-CoA → FA
+          - name: Acly
             gene_effect_sign: -1
             weight: 1.0
-          - name: Immt
+          - name: Acaca
             gene_effect_sign: -1
             weight: 1.0
-          - name: Chchd3
+          - name: Fasn
+            gene_effect_sign: -1
+            weight: 1.0
+
+          # glycerol backbone & PA/DAG formation
+          - name: Gpam
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Agpat2
             gene_effect_sign: -1
             weight: 0.7
-          - name: Chchd2
+          - name: Lpin1
+            gene_effect_sign: -1
+            weight: 0.7
+
+          # Kennedy pathway (PC/PE)
+          - name: Chka
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Pcyt1a
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Cept1
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Etnk1
             gene_effect_sign: -1
             weight: 0.5
-          - name: Atp5mc1
+          - name: Pcyt2
+            gene_effect_sign: -1
+            weight: 0.7
+
+          # CDP-DAG branch (PI/PG/CL)
+          - name: Cds1
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Cdipt
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Pgs1
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Crls1
+            gene_effect_sign: -1
+            weight: 0.7
+
+          # PS synthesis/flip (supports PS pool maintenance)
+          - name: Ptdss1
             gene_effect_sign: -1
             weight: 0.5
-          - name: Cox4i1
+          - name: Ptdss2
             gene_effect_sign: -1
-            weight: 0.3
-          - name: Oma1
-            gene_effect_sign: 1
-            weight: 0.3
+            weight: 0.5
