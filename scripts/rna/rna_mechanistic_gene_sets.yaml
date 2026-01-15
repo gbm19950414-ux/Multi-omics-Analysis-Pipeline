@@ -191,74 +191,64 @@ axes:
 
   Membrane context:
     description: >
-      膜磷脂库缩水（PC/PE/PI/PS/PG/CL 共同下降）+ TG 上升，常由“合成/供给通量受限”
-      驱动：包括 de novo 脂肪酸与甘油骨架供给、ER 侧磷脂合成节点，以及线粒体侧 CDP-DAG→PG/CL
-      分支的前体通量。该轴用于检验“合成/供给不足是否为主要障碍来源”。
+      膜磷脂库下降同时伴随 TG 上升，提示脂质被“从膜磷脂转向储存/脂滴”，并可能伴随
+      PLA2/脂解增强、DAG/FA 被导向 TG 合成。该轴用于检验“重分配到 TG + 周转/分解加快”
+      是否是驱动膜磷脂共同下降的主要障碍来源。
     modules:
 
       gene_set:
-        label: "Transcriptomic gene set for Flux limitation axis"
+        label: "Transcriptomic gene set for Rerouting to TG & breakdown axis"
         description: >
-          手工构建：覆盖脂肪酸与甘油骨架供给、Kennedy pathway（PC/PE）、CDP-DAG branch（PI/PG/CL）
-          以及 PS 合成/交换等关键瓶颈节点。分数高=障碍重，因此能力基因取 -1。
+          手工构建：覆盖 TG 合成/脂滴装配、PLA2 介导磷脂水解与脂解回收等过程。分数高=障碍重，
+          因此促 TG/分解基因取 +1。
         genes:
-          # de novo FA synthesis / acetyl-CoA → malonyl-CoA → FA
-          - name: Acly
-            gene_effect_sign: -1
+          # TG synthesis (DAG → TG)
+          - name: Dgat1
+            gene_effect_sign: 1
             weight: 1.0
-          - name: Acaca
-            gene_effect_sign: -1
-            weight: 1.0
-          - name: Fasn
-            gene_effect_sign: -1
+          - name: Dgat2
+            gene_effect_sign: 1
             weight: 1.0
 
-          # glycerol backbone & PA/DAG formation
-          - name: Gpam
-            gene_effect_sign: -1
-            weight: 1.0
-          - name: Agpat2
-            gene_effect_sign: -1
+          # fatty acid activation & channeling to neutral lipids
+          - name: Acsl1
+            gene_effect_sign: 1
             weight: 0.7
+          - name: Acsl3
+            gene_effect_sign: 1
+            weight: 0.7
+
+          # lipid droplet biogenesis/coating (storage bias)
+          - name: Plin2
+            gene_effect_sign: 1
+            weight: 1.0
+          - name: Plin3
+            gene_effect_sign: 1
+            weight: 0.5
+          - name: Fitm2
+            gene_effect_sign: 1
+            weight: 0.5
+
+          # phospholipid hydrolysis / remodeling toward loss (FA release, lysophospholipids)
+          - name: Pla2g6
+            gene_effect_sign: 1
+            weight: 0.7
+          - name: Pnpla8
+            gene_effect_sign: 1
+            weight: 0.5
+
+          # lipolysis & FA release/recycling (can increase turnover pressure)
+          - name: Pnpla2
+            gene_effect_sign: 1
+            weight: 0.7
+          - name: Lipe
+            gene_effect_sign: 1
+            weight: 0.3
+          - name: Mgll
+            gene_effect_sign: 1
+            weight: 0.5
+
+          # optional: lipid droplet growth / phospholipid turnover coupling
           - name: Lpin1
-            gene_effect_sign: -1
-            weight: 0.7
-
-          # Kennedy pathway (PC/PE)
-          - name: Chka
-            gene_effect_sign: -1
-            weight: 0.7
-          - name: Pcyt1a
-            gene_effect_sign: -1
-            weight: 1.0
-          - name: Cept1
-            gene_effect_sign: -1
-            weight: 0.7
-          - name: Etnk1
-            gene_effect_sign: -1
-            weight: 0.5
-          - name: Pcyt2
-            gene_effect_sign: -1
-            weight: 0.7
-
-          # CDP-DAG branch (PI/PG/CL)
-          - name: Cds1
-            gene_effect_sign: -1
-            weight: 0.7
-          - name: Cdipt
-            gene_effect_sign: -1
-            weight: 0.7
-          - name: Pgs1
-            gene_effect_sign: -1
-            weight: 0.7
-          - name: Crls1
-            gene_effect_sign: -1
-            weight: 0.7
-
-          # PS synthesis/flip (supports PS pool maintenance)
-          - name: Ptdss1
-            gene_effect_sign: -1
-            weight: 0.5
-          - name: Ptdss2
-            gene_effect_sign: -1
-            weight: 0.5
+            gene_effect_sign: 1
+            weight: 0.3
