@@ -1,0 +1,213 @@
+# ============================================================
+# Transcriptomic mechanistic gene sets for cardiolipin homeostasis
+# 可扩容：后续若发现新的机制基因，可在对应 axis / module 下追加 genes
+# ============================================================
+
+metadata:
+  version: "0.2"
+  species: "Mus_musculus"   # 视你转录组物种修改：如 "Mus_musculus" / "Homo_sapiens"
+  description: >
+    Mechanistic gene sets for cardiolipin synthesis, remodeling,
+    oxidation/degradation, transport/distribution and precursor supply / 
+    mitochondrial capacity. Each axis is split into core, extended and
+    regulatory / modulatory modules when applicable.
+
+
+# ============================================================
+# ID 映射配置：让脚本知道如何从 gene symbol 映射到 Ensembl ID
+# ============================================================
+
+mapping:
+  # DE 结果文件中基因 ID 所在的列名（来自 08_deseq2/09_deg_filter 之后的表）
+  de_gene_id_column: "GeneID"
+
+  # DE 结果里的 ID 类型：这里明确是 Ensembl
+  de_id_type: "ensembl_gene_id"
+
+  # 外部映射文件，用于从 gene_symbol 映射到 Ensembl ID
+  # 你需要自己准备这张表，至少包含：
+  #   - name: ensembl_gene_id
+  #   - name: gene_symbol
+  # 建议放在 multiomics_mech/ref/gene_symbol_to_ensembl.tsv
+  table: "scripts/rna/rna_mechanistic_gene_sets_gene_registry.tsv"
+
+  # 映射表中对应的列名
+  symbol_column: "gene_symbol"
+  ensembl_column: "ensembl_gene_id"
+
+# 每个 axis 下可以有若干 module（core / extended / regulatory），
+# 后续你若想增加子路径（例如“CDP-DAG branch”），可以新增 module。
+
+axes:
+  Membrane context:
+    description: >
+      线粒体嵴 / cristae 结构、MICOS 复合体与 OPA1/OMA1 平衡等，决定
+      CL-rich 区域在内膜上的空间组织和膜环境，对 CL 功能起到“膜场景”修饰作用。
+      也可能在磷脂合成减少或分解增加时候，通过膜结构调节部分缓冲 CL 含量下降的影响。
+    modules:
+
+      gene_set:
+        label: "Transcriptomic gene set for Membrane context axis"
+        description: >
+          从 figure_6_b.xlsx 中 feature_type = "gene" 且 axis = "Membrane context" 的行自动生成。
+        genes:
+          - name: Opa1
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Immt
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Chchd3
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Chchd2
+            gene_effect_sign: -1
+            weight: 0.5
+          - name: Atp5mc1
+            gene_effect_sign: -1
+            weight: 0.5
+          - name: Cox4i1
+            gene_effect_sign: -1
+            weight: 0.3
+          - name: Oma1
+            gene_effect_sign: 1
+            weight: 0.3
+
+  Flux limitation:
+    description: >
+      膜磷脂库缩水（PC/PE/PI/PS/PG/CL 共同下降）+ TG 上升，常由“合成/供给通量受限”
+      驱动：包括 de novo 脂肪酸与甘油骨架供给、ER 侧磷脂合成节点，以及线粒体侧 CDP-DAG→PG/CL
+      分支的前体通量。该轴用于检验“合成/供给不足是否为主要障碍来源”。
+    modules:
+
+      gene_set:
+        label: "Transcriptomic gene set for Flux limitation axis"
+        description: >
+          手工构建：覆盖脂肪酸与甘油骨架供给、Kennedy pathway（PC/PE）、CDP-DAG branch（PI/PG/CL）
+          以及 PS 合成/交换等关键瓶颈节点。分数高=障碍重，因此能力基因取 -1。
+        genes:
+          # de novo FA synthesis / acetyl-CoA → malonyl-CoA → FA
+          - name: Acly
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Acaca
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Fasn
+            gene_effect_sign: -1
+            weight: 1.0
+
+          # glycerol backbone & PA/DAG formation
+          - name: Gpam
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Agpat2
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Lpin1
+            gene_effect_sign: -1
+            weight: 0.7
+
+          # Kennedy pathway (PC/PE)
+          - name: Chka
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Pcyt1a
+            gene_effect_sign: -1
+            weight: 1.0
+          - name: Cept1
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Etnk1
+            gene_effect_sign: -1
+            weight: 0.5
+          - name: Pcyt2
+            gene_effect_sign: -1
+            weight: 0.7
+
+          # CDP-DAG branch (PI/PG/CL)
+          - name: Cds1
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Cdipt
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Pgs1
+            gene_effect_sign: -1
+            weight: 0.7
+          - name: Crls1
+            gene_effect_sign: -1
+            weight: 0.7
+
+          # PS synthesis/flip (supports PS pool maintenance)
+          - name: Ptdss1
+            gene_effect_sign: -1
+            weight: 0.5
+          - name: Ptdss2
+            gene_effect_sign: -1
+            weight: 0.5
+
+
+  Rerouting to TG & breakdown:
+    description: >
+      膜磷脂库下降同时伴随 TG 上升，提示脂质被“从膜磷脂转向储存/脂滴”，并可能伴随
+      PLA2/脂解增强、DAG/FA 被导向 TG 合成。该轴用于检验“重分配到 TG + 周转/分解加快”
+      是否是驱动膜磷脂共同下降的主要障碍来源。
+    modules:
+
+      gene_set:
+        label: "Transcriptomic gene set for Rerouting to TG & breakdown axis"
+        description: >
+          手工构建：覆盖 TG 合成/脂滴装配、PLA2 介导磷脂水解与脂解回收等过程。分数高=障碍重，
+          因此促 TG/分解基因取 +1。
+        genes:
+          # TG synthesis (DAG → TG)
+          - name: Dgat1
+            gene_effect_sign: 1
+            weight: 1.0
+          - name: Dgat2
+            gene_effect_sign: 1
+            weight: 1.0
+
+          # fatty acid activation & channeling to neutral lipids
+          - name: Acsl1
+            gene_effect_sign: 1
+            weight: 0.7
+          - name: Acsl3
+            gene_effect_sign: 1
+            weight: 0.7
+
+          # lipid droplet biogenesis/coating (storage bias)
+          - name: Plin2
+            gene_effect_sign: 1
+            weight: 1.0
+          - name: Plin3
+            gene_effect_sign: 1
+            weight: 0.5
+          - name: Fitm2
+            gene_effect_sign: 1
+            weight: 0.5
+
+          # phospholipid hydrolysis / remodeling toward loss (FA release, lysophospholipids)
+          - name: Pla2g6
+            gene_effect_sign: 1
+            weight: 0.7
+          - name: Pnpla8
+            gene_effect_sign: 1
+            weight: 0.5
+
+          # lipolysis & FA release/recycling (can increase turnover pressure)
+          - name: Pnpla2
+            gene_effect_sign: 1
+            weight: 0.7
+          - name: Lipe
+            gene_effect_sign: 1
+            weight: 0.3
+          - name: Mgll
+            gene_effect_sign: 1
+            weight: 0.5
+
+          # optional: lipid droplet growth / phospholipid turnover coupling
+          - name: Lpin1
+            gene_effect_sign: 1
+            weight: 0.3

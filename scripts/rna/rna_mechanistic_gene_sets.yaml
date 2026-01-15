@@ -189,7 +189,7 @@ axes:
             gene_effect_sign: -1
             weight: 0.5
 
-  "Membrane context":
+  Membrane context:
     description: >
       线粒体嵴 / cristae 结构、MICOS 复合体与 OPA1/OMA1 平衡等，决定
       CL-rich 区域在内膜上的空间组织和膜环境，对 CL 功能起到“膜场景”修饰作用。
