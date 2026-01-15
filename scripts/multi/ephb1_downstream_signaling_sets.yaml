@@ -52,6 +52,23 @@ pathways:
       - name: Arhgap35
         gene_effect_sign: 1
 
+      # ROCK/LIMK/MLC/应力纤维张力的 readout，20260115新增
+      - name: Rock1
+        gene_effect_sign: 1
+      - name: Rock2
+        gene_effect_sign: 1
+      - name: Limk1
+        gene_effect_sign: 1
+      - name: Limk2
+        gene_effect_sign: 1
+      - name: Cfl4
+        gene_effect_sign: 1
+      - name: Myh9
+        gene_effect_sign: 1
+      - name: Myl9
+        gene_effect_sign: 1
+
+
   EphB1_PI3K_AKT_mTOR:
     axis: "EphB1_signaling"
     target_mechanistic_axes:
@@ -93,13 +110,17 @@ pathways:
         gene_effect_sign: 1
       - name: Mlst8
         gene_effect_sign: 1
-      - name: Prkaa1     # AMPK catalytic α1 (负向调节 mTOR，见 AMPK 模块)
+
+      # pi3k抑制子，20260115新增
+      - name: Pten
         gene_effect_sign: -1
-      - name: Prkaa2     # AMPK α2
+      - name: Pik3ip1
         gene_effect_sign: -1
-      - name: Tsc1
+      - name: Inpp4b
         gene_effect_sign: -1
-      - name: Tsc2
+      - name: Phlpp1
+        gene_effect_sign: -1
+      - name: Phlpp2
         gene_effect_sign: -1
 
       # downstream effectors (translation & growth)
@@ -176,6 +197,9 @@ pathways:
       - name: Atf2
         gene_effect_sign: 1
 
+      # 负反馈调节dusp家族
+
+
   EphB1_JAK_STAT_inflammatory:
     axis: "EphB1_signaling"
     target_mechanistic_axes:
@@ -220,10 +244,10 @@ pathways:
         gene_effect_sign: 1
       - name: Irf7
         gene_effect_sign: 1
-      - name: Socs1     # 负反馈
-        gene_effect_sign: -1
+      - name: Socs1     # 负反馈，会在通路激活时候上升转录
+        gene_effect_sign: 1
       - name: Socs3
-        gene_effect_sign: -1
+        gene_effect_sign: 1
 
   EphB1_NFkB_inflammation_ROS:
     axis: "EphB1_signaling"
@@ -248,11 +272,11 @@ pathways:
 
       # IκB family
       - name: Nfkbia    # IκBα
-        gene_effect_sign: -1
+        gene_effect_sign: 1
       - name: Nfkbib
-        gene_effect_sign: -1
+        gene_effect_sign: 1
       - name: Nfkbie
-        gene_effect_sign: -1
+        gene_effect_sign: 1
 
       # IKK complex
       - name: Chuk      # IKKα
