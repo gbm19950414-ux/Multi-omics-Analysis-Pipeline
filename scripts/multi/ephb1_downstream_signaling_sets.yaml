@@ -12,61 +12,84 @@ pathways:
       通过影响细胞骨架重排、黏附复合体和线粒体定位/形态，间接调节线粒体功能。
       模块得分升高代表 EphB1 相关的骨架/黏附信号被激活.
     genes:
-      # receptor & adaptor
+      # receptor & adaptor (表达不等于活性；保留作参考，低权重)
       - name: Ephb1
         gene_effect_sign: 1
+        weight: 0.1
       - name: Efnb1        # ephrin-B1 ligand
         gene_effect_sign: 1
+        weight: 0.1
       - name: Efnb2
         gene_effect_sign: 1
+        weight: 0.1
 
-      # FAK / Src complex
+      # FAK / Src complex（转录对活性不敏感，低权重）
       - name: Ptk2         # FAK
         gene_effect_sign: 1
+        weight: 0.3
       - name: Src
         gene_effect_sign: 1
+        weight: 0.3
       - name: Yes1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Lyn
         gene_effect_sign: 1
+        weight: 0.3
 
-      # Rho GTPases
+      # Rho GTPases（GTP-loading 决定活性，转录仅作背景，低权重）
       - name: Rhoa
         gene_effect_sign: 1
+        weight: 0.2
       - name: Rac1
         gene_effect_sign: 1
+        weight: 0.2
       - name: Cdc42
         gene_effect_sign: 1
+        weight: 0.2
 
-      # Rho GEFs / GAPs（只选部分代表）
+      # Rho GEFs / GAPs（只选部分代表；转录仅作背景，低权重）
       - name: Vav2
         gene_effect_sign: 1
+        weight: 0.2
       - name: Vav3
         gene_effect_sign: 1
+        weight: 0.2
       - name: Arhgef1
         gene_effect_sign: 1
+        weight: 0.2
       - name: Arhgef12
         gene_effect_sign: 1
+        weight: 0.2
       - name: Arhgap5
         gene_effect_sign: 1
+        weight: 0.2
       - name: Arhgap35
         gene_effect_sign: 1
+        weight: 0.2
 
       # ROCK/LIMK/MLC/应力纤维张力的 readout，20260115新增
       - name: Rock1
         gene_effect_sign: 1
+        weight: 1.0
       - name: Rock2
         gene_effect_sign: 1
+        weight: 1.0
       - name: Limk1
         gene_effect_sign: 1
+        weight: 1.0
       - name: Limk2
         gene_effect_sign: 1
-      - name: Cfl4
+        weight: 1.0
+      - name: Cfl1
         gene_effect_sign: 1
+        weight: 1.0
       - name: Myh9
         gene_effect_sign: 1
+        weight: 1.0
       - name: Myl9
         gene_effect_sign: 1
+        weight: 1.0
 
 
   EphB1_PI3K_AKT_mTOR:
@@ -84,52 +107,72 @@ pathways:
       # PI3K catalytic & regulatory subunits
       - name: Pik3ca
         gene_effect_sign: 1
+        weight: 0.3
       - name: Pik3cb
         gene_effect_sign: 1
+        weight: 0.3
       - name: Pik3cd
         gene_effect_sign: 1
+        weight: 0.3
       - name: Pik3r1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Pik3r2
         gene_effect_sign: 1
+        weight: 0.3
 
       # AKT kinases
       - name: Akt1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Akt2
         gene_effect_sign: 1
+        weight: 0.3
       - name: Akt3
         gene_effect_sign: 1
+        weight: 0.3
 
       # mTOR complexes & regulators
       - name: Mtor
         gene_effect_sign: 1
+        weight: 0.3
       - name: Rptor      # mTORC1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Rictor     # mTORC2
         gene_effect_sign: 1
+        weight: 0.3
       - name: Mlst8
         gene_effect_sign: 1
+        weight: 0.3
 
       # pi3k抑制子，20260115新增
       - name: Pten
         gene_effect_sign: -1
+        weight: 0.3
       - name: Pik3ip1
         gene_effect_sign: -1
+        weight: 0.3
       - name: Inpp4b
         gene_effect_sign: -1
+        weight: 0.3
       - name: Phlpp1
         gene_effect_sign: -1
+        weight: 0.3
       - name: Phlpp2
         gene_effect_sign: -1
+        weight: 0.3
 
       # downstream effectors (translation & growth)
       - name: Rps6kb1    # S6K1
         gene_effect_sign: 1
+        weight: 0.7
       - name: Rps6kb2    # S6K2
         gene_effect_sign: 1
+        weight: 0.7
       - name: Eif4ebp1   # 4EBP1
         gene_effect_sign: 1
+        weight: 0.7
 
   EphB1_MAPK_ERK_p38_JNK:
     axis: "EphB1_signaling"
@@ -146,59 +189,90 @@ pathways:
       # RAS family
       - name: Hras
         gene_effect_sign: 1
+        weight: 0.3
       - name: Kras
         gene_effect_sign: 1
+        weight: 0.3
       - name: Nras
         gene_effect_sign: 1
+        weight: 0.3
 
       # RAF kinases
       - name: Braf
         gene_effect_sign: 1
+        weight: 0.3
       - name: Raf1
         gene_effect_sign: 1
+        weight: 0.3
 
       # MEK (MAP2K)
       - name: Map2k1    # MEK1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Map2k2    # MEK2
         gene_effect_sign: 1
+        weight: 0.3
 
       # ERK (MAPK)
       - name: Mapk1     # ERK2
         gene_effect_sign: 1
+        weight: 0.3
       - name: Mapk3     # ERK1
         gene_effect_sign: 1
+        weight: 0.3
 
       # p38 family
       - name: Mapk14    # p38α
         gene_effect_sign: 1
+        weight: 0.3
       - name: Mapk11    # p38β
         gene_effect_sign: 1
+        weight: 0.3
       - name: Mapk12    # p38γ
         gene_effect_sign: 1
+        weight: 0.3
 
       # JNK family
       - name: Mapk8     # JNK1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Mapk9     # JNK2
         gene_effect_sign: 1
+        weight: 0.3
       - name: Mapk10    # JNK3
         gene_effect_sign: 1
+        weight: 0.3
 
       # downstream TFs
       - name: Elk1
         gene_effect_sign: 1
+        weight: 1.0
       - name: Fos
         gene_effect_sign: 1
+        weight: 1.0
       - name: Jun
         gene_effect_sign: 1
+        weight: 1.0
       - name: Jund
         gene_effect_sign: 1
+        weight: 1.0
       - name: Atf2
         gene_effect_sign: 1
+        weight: 1.0
 
       # 负反馈调节dusp家族
-
+      - name: Dusp1
+        gene_effect_sign: 1
+        weight: 0.7
+      - name: Dusp4
+        gene_effect_sign: 1
+        weight: 0.7
+      - name: Dusp5
+        gene_effect_sign: 1
+        weight: 0.7
+      - name: Dusp6
+        gene_effect_sign: 1
+        weight: 0.7
 
   EphB1_JAK_STAT_inflammatory:
     axis: "EphB1_signaling"
@@ -214,40 +288,56 @@ pathways:
       # JAK kinases
       - name: Jak1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Jak2
         gene_effect_sign: 1
+        weight: 0.3
       - name: Jak3
         gene_effect_sign: 1
+        weight: 0.3
       - name: Tyk2
         gene_effect_sign: 1
+        weight: 0.3
 
       # STAT TFs
       - name: Stat1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Stat2
         gene_effect_sign: 1
+        weight: 0.3
       - name: Stat3
         gene_effect_sign: 1
+        weight: 0.3
       - name: Stat5a
         gene_effect_sign: 1
+        weight: 0.3
       - name: Stat5b
         gene_effect_sign: 1
+        weight: 0.3
       - name: Stat6
         gene_effect_sign: 1
+        weight: 0.3
 
       # 部分炎症/IFN 相关靶基因（示意，可按需扩展）
       - name: Ifit1
         gene_effect_sign: 1
+        weight: 1.0
       - name: Ifit3
         gene_effect_sign: 1
+        weight: 1.0
       - name: Isg15
         gene_effect_sign: 1
+        weight: 1.0
       - name: Irf7
         gene_effect_sign: 1
+        weight: 1.0
       - name: Socs1     # 负反馈，会在通路激活时候上升转录
         gene_effect_sign: 1
+        weight: 0.5
       - name: Socs3
         gene_effect_sign: 1
+        weight: 0.5
 
   EphB1_NFkB_inflammation_ROS:
     axis: "EphB1_signaling"
@@ -263,40 +353,55 @@ pathways:
       # NF-κB core components
       - name: Rela      # p65
         gene_effect_sign: 1
+        weight: 0.3
       - name: Relb
         gene_effect_sign: 1
+        weight: 0.3
       - name: Nfkb1     # p50
         gene_effect_sign: 1
+        weight: 0.3
       - name: Nfkb2     # p52
         gene_effect_sign: 1
+        weight: 0.3
 
       # IκB family
       - name: Nfkbia    # IκBα
         gene_effect_sign: 1
+        weight: 0.5
       - name: Nfkbib
         gene_effect_sign: 1
+        weight: 0.5
       - name: Nfkbie
         gene_effect_sign: 1
+        weight: 0.5
 
       # IKK complex
       - name: Chuk      # IKKα
         gene_effect_sign: 1
+        weight: 0.3
       - name: Ikbkb     # IKKβ
         gene_effect_sign: 1
+        weight: 0.3
       - name: Ikbkg     # NEMO
         gene_effect_sign: 1
+        weight: 0.3
 
       # inflammatory targets (示例)
       - name: Tnf
         gene_effect_sign: 1
+        weight: 1.0
       - name: Il1b
         gene_effect_sign: 1
+        weight: 1.0
       - name: Il6
         gene_effect_sign: 1
+        weight: 1.0
       - name: Ccl2
         gene_effect_sign: 1
+        weight: 1.0
       - name: Cxcl10
         gene_effect_sign: 1
+        weight: 1.0
 
   EphB1_PGC1_NRF_mito_biogenesis:
     axis: "EphB1_signaling"
@@ -314,34 +419,47 @@ pathways:
       # coactivators
       - name: Ppargc1a   # PGC-1α
         gene_effect_sign: 1
+        weight: 0.7
       - name: Ppargc1b   # PGC-1β
         gene_effect_sign: 1
+        weight: 0.7
 
       # transcription factors
       - name: Nrf1
         gene_effect_sign: 1
+        weight: 0.7
       - name: Nfe2l2     # NRF2
         gene_effect_sign: 1
+        weight: 0.7
       - name: Esrra      # ERRα
         gene_effect_sign: 1
+        weight: 0.7
       - name: Esrrg      # ERRγ
         gene_effect_sign: 1
+        weight: 0.7
       - name: Creb1
         gene_effect_sign: 1
+        weight: 0.7
 
       # selected mitochondrial targets (示例，可与已有 mechanistic gene sets 对应)
       - name: Tfam
         gene_effect_sign: 1
+        weight: 0.3
       - name: Tfb1m
         gene_effect_sign: 1
+        weight: 0.3
       - name: Tfb2m
         gene_effect_sign: 1
+        weight: 0.3
       - name: Ndufa9
         gene_effect_sign: 1
+        weight: 0.3
       - name: Cox4i1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Atp5f1a
         gene_effect_sign: 1
+        weight: 0.3
   EphB1_integrin_caveolae_membrane_microdomain:
     axis: "EphB1_signaling"
     target_mechanistic_axes:
@@ -358,32 +476,44 @@ pathways:
       # integrin receptors
       - name: Itgb1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Itgb3
         gene_effect_sign: 1
+        weight: 0.3
       - name: Itga5
         gene_effect_sign: 1
+        weight: 0.3
 
       # focal adhesion complex
       - name: Pxn        # paxillin
         gene_effect_sign: 1
+        weight: 0.7
       - name: Tln1       # talin 1
         gene_effect_sign: 1
+        weight: 0.7
       - name: Tln2       # talin 2
         gene_effect_sign: 1
+        weight: 0.7
       - name: Vcl        # vinculin
         gene_effect_sign: 1
+        weight: 0.7
       - name: Fermt2     # kindlin-2
         gene_effect_sign: 1
+        weight: 0.7
 
       # caveolae / microdomain
       - name: Cav1
         gene_effect_sign: 1
+        weight: 0.7
       - name: Cav2
         gene_effect_sign: 1
+        weight: 0.7
       - name: Flot1
         gene_effect_sign: 1
+        weight: 0.7
       - name: Flot2
         gene_effect_sign: 1
+        weight: 0.7
   EphB1_AMPK_energy_sensing:
     axis: "EphB1_signaling"
     target_mechanistic_axes:
@@ -401,30 +531,40 @@ pathways:
       # AMPK catalytic subunits
       - name: Prkaa1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Prkaa2
         gene_effect_sign: 1
+        weight: 0.3
 
       # AMPK regulatory (β/γ subunits)
       - name: Prkab1
         gene_effect_sign: 1
+        weight: 0.3
       - name: Prkab2
         gene_effect_sign: 1
+        weight: 0.3
       - name: Prkag1
         gene_effect_sign: 1
+        weight: 0.3
 
       # TSC complex (AMPK activates TSC → inhibits mTORC1)
       - name: Tsc1
         gene_effect_sign: 1
+        weight: 0.5
       - name: Tsc2
         gene_effect_sign: 1
+        weight: 0.5
 
       # downstream metabolic sensing
       - name: Sirt1
         gene_effect_sign: 1
+        weight: 0.7
       - name: Ppargc1a   # PGC-1α (在生物发生模块已出现，此处作为 AMPK 下游连接点)
         gene_effect_sign: 1
+        weight: 0.7
       - name: Ppargc1b
         gene_effect_sign: 1
+        weight: 0.7
   EphB1_mito_stress_cell_death:
     axis: "EphB1_signaling"
     target_mechanistic_axes:
@@ -443,42 +583,58 @@ pathways:
       # BCL-2 family (apoptosis control)
       - name: Bcl2
         gene_effect_sign: -1        # 抗凋亡，上调 = 细胞死亡模块被抑制
+        weight: 0.7
       - name: Bcl2l1    # Bcl-xL
         gene_effect_sign: -1        # 抗凋亡，上调 = 细胞死亡模块被抑制
+        weight: 0.7
       - name: Bax
         gene_effect_sign: 1         # 促凋亡，上调 = 细胞死亡模块被激活
+        weight: 0.7
       - name: Bak1
         gene_effect_sign: 1
+        weight: 0.7
       - name: Bnip3      # mito stress / hypoxia-induced
         gene_effect_sign: 1
+        weight: 0.7
       - name: Bnip3l
         gene_effect_sign: 1
+        weight: 0.7
 
       # TNF–RIPK necroptosis pathway
       - name: Tnfrsf1a
         gene_effect_sign: 1
+        weight: 0.5
       - name: Ripk1
         gene_effect_sign: 1
+        weight: 0.5
       - name: Ripk3
         gene_effect_sign: 1
+        weight: 0.5
       - name: Mlkl
         gene_effect_sign: 1
+        weight: 0.5
 
       # NLRP3 inflammasome / pyroptosis
       - name: Nlrp3
         gene_effect_sign: 1
+        weight: 0.5
       - name: Pycard     # ASC
         gene_effect_sign: 1
+        weight: 0.5
       - name: Casp1
         gene_effect_sign: 1
+        weight: 0.5
       - name: Gsdmd
         gene_effect_sign: 1
+        weight: 0.5
 
       # integrated stress response (ISR) / mito stress TFs
       - name: Hif1a
         gene_effect_sign: 1
+        weight: 1.0
       - name: Atf4
         gene_effect_sign: 1
+        weight: 1.0
       - name: Ddit3      # CHOP
         gene_effect_sign: 1
-        
+        weight: 1.0
