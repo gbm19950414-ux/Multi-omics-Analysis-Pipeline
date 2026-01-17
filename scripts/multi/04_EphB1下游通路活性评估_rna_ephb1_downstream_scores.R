@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 ## ============================================================
-## 05_rna_ephb1_downstream_scores.R
+## 04_EphB1下游通路活性评估_rna_ephb1_downstream_scores.R
 ##
 ## 目的：
 ##   基于基因层面 DESeq2 log2FC（KO vs WT），
@@ -58,6 +58,70 @@ suppressPackageStartupMessages({
 
 `%||%` <- function(a, b) if (!is.null(a)) a else b
 
+# ---- helpers: size factor normalization (median-of-ratios) ----
+estimate_size_factors_median_ratio <- function(count_mat) {
+  gm <- apply(count_mat, 1, function(x) {
+    x <- x[x > 0]
+    if (length(x) == 0) return(NA_real_)
+    exp(mean(log(x)))
+  })
+  keep <- !is.na(gm) & gm > 0
+  ratios <- sweep(count_mat[keep, , drop = FALSE], 1, gm[keep], FUN = "/")
+  sf <- apply(ratios, 2, function(r) stats::median(r[r > 0 & is.finite(r)], na.rm = TRUE))
+  sf[is.na(sf) | sf <= 0] <- 1
+  sf <- sf / exp(mean(log(sf)))
+  sf
+}
+
+# batch-wise z-score (per feature across samples within each batch)
+col_zscore_by_batch <- function(mat_feat_x_sample, batch_vec) {
+  out <- mat_feat_x_sample
+  for (b in sort(unique(batch_vec))) {
+    idx <- which(batch_vec == b)
+    if (length(idx) < 2) next
+    sub <- mat_feat_x_sample[, idx, drop = FALSE]
+    mu <- rowMeans(sub, na.rm = TRUE)
+    sdv <- apply(sub, 1, sd, na.rm = TRUE)
+    sdv[sdv == 0 | is.na(sdv)] <- NA_real_
+    out[, idx] <- (sub - mu) / sdv
+  }
+  out
+}
+
+# compute pathway score per sample: mean( expr * gene_effect_sign * weight )
+score_pathways_per_sample <- function(expr_gene_x_sample, pathway_gene_df) {
+  # pathway_gene_df: pathway, axis, GeneID, gene_effect_sign, weight
+  pg <- pathway_gene_df %>%
+    dplyr::filter(!is.na(GeneID)) %>%
+    dplyr::mutate(
+      gene_effect_sign = dplyr::if_else(is.na(gene_effect_sign), 1, as.numeric(gene_effect_sign)),
+      weight           = dplyr::if_else(is.na(weight), 1, as.numeric(weight))
+    )
+
+  pathways <- sort(unique(pg$pathway))
+  samples  <- colnames(expr_gene_x_sample)
+  score_mat <- matrix(NA_real_, nrow = length(pathways), ncol = length(samples),
+                      dimnames = list(pathways, samples))
+
+  for (pw in pathways) {
+    gsub <- pg %>% dplyr::filter(pathway == pw)
+    gids <- intersect(gsub$GeneID, rownames(expr_gene_x_sample))
+    if (length(gids) == 0) next
+    w   <- gsub$weight[match(gids, gsub$GeneID)]
+    sgn <- gsub$gene_effect_sign[match(gids, gsub$GeneID)]
+    w[is.na(w)] <- 1
+    sgn[is.na(sgn)] <- 1
+
+    x <- expr_gene_x_sample[gids, , drop = FALSE]
+    # apply sign and weight gene-wise
+    x2 <- sweep(x, 1, (sgn * w), FUN = "*")
+    score_mat[pw, ] <- colMeans(x2, na.rm = TRUE)
+  }
+
+  as.data.frame(score_mat) %>%
+    tibble::rownames_to_column("pathway")
+}
+
 ## --------- 0. 解析命令行参数 & 配置 -------------------------
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -82,18 +146,28 @@ outdir_default        <- "results/multiomics/tables"
 downstream_yaml_default <- "scripts/multi/ephb1_downstream_signaling_sets.yaml"
 lfc_table_default     <- "interaction_summary_with_perBatchLFC.tsv"
 
+# Optional: raw featureCounts table for sample-level scoring
+rna_counts_default    <- "data/processed/rna/all_batches_featureCounts.tsv"
+# Optional: sample meta table (if absent, infer from column names)
+# required columns if provided: sample_id, batch, genotype
+rna_sample_meta_default <- ""
+
 deseq2_outdir   <- cfg$deseq2_outdir            %||% deseq2_outdir_default
 outdir          <- cfg$outdir                   %||% outdir_default
 downstream_yaml <- cfg$downstream_gene_set_yaml %||% downstream_yaml_default
 lfc_table       <- cfg$lfc_table                %||% lfc_table_default
+rna_counts_tsv   <- cfg$rna_counts_tsv          %||% rna_counts_default
+rna_sample_meta  <- cfg$rna_sample_meta_tsv     %||% rna_sample_meta_default
 
 lfc_path <- file.path(deseq2_outdir, lfc_table)
 
 cat("============================================================\n")
-cat("[INFO] 05_rna_ephb1_downstream_scores.R\n")
+cat("[INFO] 04_EphB1下游通路活性评估_rna_ephb1_downstream_scores.R\n")
 cat("  LFC table path : ", lfc_path, "\n", sep = "")
 cat("  pathway YAML   : ", downstream_yaml, "\n", sep = "")
 cat("  outdir         : ", outdir, "\n", sep = "")
+cat("  counts (opt)  : ", rna_counts_tsv,  "\n", sep = "")
+cat("  sample meta   : ", ifelse(nchar(rna_sample_meta) == 0, "<infer>", rna_sample_meta), "\n", sep = "")
 cat("============================================================\n\n")
 
 ## --------- 1. 读取 per-gene per-batch LFC -------------------
@@ -162,7 +236,8 @@ pathway_gene_sym <- purrr::imap_dfr(
         pathway          = character(0),
         axis             = character(0),
         gene_symbol      = character(0),
-        gene_effect_sign = numeric(0)
+        gene_effect_sign = numeric(0),
+        weight           = numeric(0)
       ))
     }
     purrr::map_dfr(genes, function(g) {
@@ -170,7 +245,8 @@ pathway_gene_sym <- purrr::imap_dfr(
         pathway          = pw_name,
         axis             = pw$axis %||% NA_character_,
         gene_symbol      = g$name,
-        gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
+        gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1),
+        weight           = as.numeric(g$weight %||% 1)
       )
     })
   }
@@ -269,8 +345,114 @@ out_path <- file.path(outdir, "ephb1_downstream_signaling_scores_per_batch.tsv")
 readr::write_tsv(pathway_scores, out_path)
 
 cat("\n[OK] 写出 EphB1 下游信号通路 Z 分数表: ", out_path, "\n", sep = "")
+
+
+## --------- 6. （可选）sample-level 通路分数宽表 ----------------
+
+cat("\n[STEP6] （可选）计算 sample-level 下游通路分数宽表 ...\n")
+
+if (!file.exists(rna_counts_tsv)) {
+  cat("  [SKIP] 未找到 counts 表（rna_counts_tsv）: ", rna_counts_tsv, "\n", sep = "")
+} else {
+  cat("  [INFO] 读取 counts 表: ", rna_counts_tsv, "\n", sep = "")
+  counts_tbl <- readr::read_tsv(rna_counts_tsv, show_col_types = FALSE)
+
+  if (!"GeneID" %in% colnames(counts_tbl)) {
+    stop("[ERROR] counts 表缺少 GeneID 列: ", rna_counts_tsv)
+  }
+
+  sample_cols <- setdiff(colnames(counts_tbl), "GeneID")
+  if (length(sample_cols) < 2) {
+    stop("[ERROR] counts 表样本列过少（<2），无法计算 sample-level 分数。")
+  }
+
+  # sample meta: either from file or inferred from column names
+  if (nchar(rna_sample_meta) > 0 && file.exists(rna_sample_meta)) {
+    meta <- readr::read_tsv(rna_sample_meta, show_col_types = FALSE)
+    if (!all(c("sample_id", "batch", "genotype") %in% colnames(meta))) {
+      stop("[ERROR] sample meta 必须包含列: sample_id, batch, genotype。实际列: ",
+           paste(colnames(meta), collapse = ", "))
+    }
+    meta <- meta %>% dplyr::filter(sample_id %in% sample_cols)
+  } else {
+    meta <- tibble::tibble(sample_id = sample_cols) %>%
+      dplyr::mutate(
+        batch = stringr::str_extract(sample_id, "batch[0-9]+"),
+        genotype = dplyr::case_when(
+          stringr::str_detect(sample_id, "WT") ~ "WT",
+          stringr::str_detect(sample_id, "HO") ~ "HO",
+          stringr::str_detect(sample_id, "KO") ~ "HO",
+          TRUE ~ NA_character_
+        )
+      )
+  }
+
+  if (any(is.na(meta$batch))) {
+    cat("  [WARN] 有样本未能从列名推断 batch（batch\\d+），这些样本将被丢弃。\n")
+    meta <- meta %>% dplyr::filter(!is.na(batch))
+  }
+
+  keep_samples <- meta$sample_id
+  if (length(keep_samples) < 3) {
+    stop("[ERROR] 可用于 sample-level 的样本数过少（<3）。")
+  }
+
+  # counts matrix
+  count_mat <- counts_tbl %>%
+    dplyr::select(GeneID, dplyr::all_of(keep_samples)) %>%
+    tibble::column_to_rownames("GeneID") %>%
+    as.matrix()
+
+  # normalize by size factors, log2
+  sf <- estimate_size_factors_median_ratio(count_mat)
+  norm_mat <- sweep(count_mat, 2, sf, FUN = "/")
+  expr_log2 <- log2(norm_mat + 1)
+
+  # pathway_gene_tbl already has GeneID, gene_effect_sign, weight
+  pathway_gene_tbl2 <- pathway_gene_tbl %>%
+    dplyr::mutate(weight = as.numeric(weight %||% 1))
+
+  # raw pathway score per sample (pathway x sample)
+  score_wide_raw <- score_pathways_per_sample(expr_log2, pathway_gene_tbl2)
+
+  # convert to matrix for batch-wise z-score
+  score_mat_raw <- score_wide_raw %>%
+    dplyr::select(-pathway) %>%
+    as.matrix()
+  rownames(score_mat_raw) <- score_wide_raw$pathway
+
+  batch_vec <- meta$batch[match(colnames(score_mat_raw), meta$sample_id)]
+  score_mat_z <- col_zscore_by_batch(score_mat_raw, batch_vec)
+
+  # write wide tables
+  out_path_raw <- file.path(outdir, "ephb1_downstream_signaling_scores_per_sample_raw.tsv")
+  out_path_z   <- file.path(outdir, "ephb1_downstream_signaling_scores_per_sample_z_by_batch.tsv")
+
+  readr::write_tsv(
+    as.data.frame(score_mat_raw) %>% tibble::rownames_to_column("pathway"),
+    out_path_raw
+  )
+  readr::write_tsv(
+    as.data.frame(score_mat_z) %>% tibble::rownames_to_column("pathway"),
+    out_path_z
+  )
+
+  # also write a long table with meta (handy for plotting)
+  long_z <- as.data.frame(score_mat_z) %>%
+    tibble::rownames_to_column("pathway") %>%
+    tidyr::pivot_longer(-pathway, names_to = "sample_id", values_to = "score_z") %>%
+    dplyr::left_join(meta, by = "sample_id")
+
+  out_path_long <- file.path(outdir, "ephb1_downstream_signaling_scores_per_sample_z_long.tsv")
+  readr::write_tsv(long_z, out_path_long)
+
+  cat("  [OK] 写出 sample-level raw 分数宽表: ", out_path_raw, "\n", sep = "")
+  cat("  [OK] 写出 sample-level batch内z 分数宽表: ", out_path_z, "\n", sep = "")
+  cat("  [OK] 写出 sample-level batch内z 长表: ", out_path_long, "\n", sep = "")
+}
+
 cat("============================================================\n")
-cat("[DONE] 05_rna_ephb1_downstream_scores.R 完成。\n")
+cat("[DONE] 04_EphB1下游通路活性评估_rna_ephb1_downstream_scores.R 完成。\n")
 cat("  说明：\n")
 cat("    - mean_LFC > 0 且 z_pathway > 0：该 EphB1 下游通路在 HO 中整体激活；\n")
 cat("    - mean_LFC < 0 且 z_pathway < 0：该通路在 HO 中整体受抑；\n")

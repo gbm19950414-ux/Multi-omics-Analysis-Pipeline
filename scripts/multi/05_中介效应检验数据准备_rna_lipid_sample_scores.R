@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 ## ============================================================
-## 07_rna_lipid_sample_scores.R
+## 05_中介效应检验数据准备_rna_lipid_sample_scores.R
 ##
 ## 目的：
 ##   1) 从 RNA featureCounts 矩阵中，为每个样本计算：
@@ -102,17 +102,31 @@ if (!file.exists(config_path)) {
 cat("[INFO] 使用配置文件: ", config_path, "\n", sep = "")
 cfg <- yaml::read_yaml(config_path)
 
-## 2) 强制要求的字段列表（全部从 config 读取）
-required_fields <- c(
-  "rna_counts",
-  "lipid_matrix",
-  "sample_matching",
-  "ephb1_M_yaml",
-  "upstream_M_yaml",
-  "lipid_feature_set_tsv",      # now used as lipid indicator def YAML
-  "lipid_indicator_sign_yaml",  # new: sign matrix YAML
-  "outdir"
-)
+## 2) 分析模式与所需字段
+# analysis mode:
+#   - "paired"  : original behavior, uses batch1 paired RNA+lipid
+#   - "rna_only": compute RNA sample-level X/M/Z for all RNA samples (no lipid needed)
+mode <- cfg$mode %||% "paired"
+
+required_fields <- if (mode == "rna_only") {
+  c(
+    "rna_counts",
+    "ephb1_M_yaml",
+    "upstream_M_yaml",
+    "outdir"
+  )
+} else {
+  c(
+    "rna_counts",
+    "lipid_matrix",
+    "sample_matching",
+    "ephb1_M_yaml",
+    "upstream_M_yaml",
+    "lipid_feature_set_tsv",      # now used as lipid indicator def YAML
+    "lipid_indicator_sign_yaml",  # new: sign matrix YAML
+    "outdir"
+  )
+}
 
 missing_fields <- required_fields[!required_fields %in% names(cfg)]
 if (length(missing_fields) > 0) {
@@ -123,29 +137,44 @@ if (length(missing_fields) > 0) {
 
 ## 3) 不再使用脚本内默认值，全部直接从 cfg 取
 rna_counts      <- cfg$rna_counts
-lipid_matrix    <- cfg$lipid_matrix
-sample_matching <- cfg$sample_matching
 
+# paired mode only
+lipid_matrix    <- if (mode == "rna_only") NA_character_ else cfg$lipid_matrix
+sample_matching <- if (mode == "rna_only") NA_character_ else cfg$sample_matching
+
+# RNA gene sets
 ephb1_M_yaml      <- cfg$ephb1_M_yaml
-upstream_M_yaml      <- cfg$upstream_M_yaml
+upstream_M_yaml   <- cfg$upstream_M_yaml
 
-lipid_feature_set_tsv      <- cfg$lipid_feature_set_tsv
-lipid_indicator_sign_yaml  <- cfg$lipid_indicator_sign_yaml
+# paired mode only (lipid indicator defs)
+lipid_feature_set_tsv      <- if (mode == "rna_only") NA_character_ else cfg$lipid_feature_set_tsv
+lipid_indicator_sign_yaml  <- if (mode == "rna_only") NA_character_ else cfg$lipid_indicator_sign_yaml
+
+# optional (rna_only) sample meta: must include sample_id, batch, group (or genotype)
+rna_sample_meta_tsv <- cfg$rna_sample_meta_tsv %||% ""
 
 outdir           <- cfg$outdir
 
 cat("============================================================\n")
 cat("[INFO] 05_rna_lipid_sample_scores.R\n")
+cat("  Mode            : ", mode, "\n", sep = "")
 cat("  RNA counts       : ", rna_counts,      "\n", sep = "")
-cat("  Lipid matrix     : ", lipid_matrix,    "\n", sep = "")
-cat("  Sample matching  : ", sample_matching, "\n", sep = "")
+if (mode != "rna_only") {
+  cat("  Lipid matrix     : ", lipid_matrix,    "\n", sep = "")
+  cat("  Sample matching  : ", sample_matching, "\n", sep = "")
+}
 cat("  RNA M YAML       : ", ephb1_M_yaml,      "\n", sep = "")
 cat("  RNA Y YAML       : ", upstream_M_yaml,      "\n", sep = "")
 cat("  RNA M registry    : ", cfg$ephb1_M_registry %||% "(auto *_gene_registry.tsv)", "\n", sep = "")
 cat("  RNA Y registry    : ", cfg$upstream_M_registry %||% "(auto *_gene_registry.tsv)", "\n", sep = "")
-cat("  Lipid indicator def : ", lipid_feature_set_tsv,      "\n", sep = "")
-cat("  Lipid sign YAML     : ", lipid_indicator_sign_yaml,  "\n", sep = "")
+if (mode != "rna_only") {
+  cat("  Lipid indicator def : ", lipid_feature_set_tsv,      "\n", sep = "")
+  cat("  Lipid sign YAML     : ", lipid_indicator_sign_yaml,  "\n", sep = "")
+}
 cat("  Outdir           : ", outdir,          "\n", sep = "")
+if (mode == "rna_only") {
+  cat("  RNA sample meta  : ", ifelse(nchar(rna_sample_meta_tsv) == 0, "<infer>", rna_sample_meta_tsv), "\n", sep = "")
+}
 cat("============================================================\n\n")
 
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
@@ -238,12 +267,28 @@ compute_score_rna <- function(expr_mat,
   }
   w_vec[is.na(w_vec) | w_vec <= 0] <- 1
 
-  z_mat <- row_zscore(expr_sub, batch_vec = batch_vec)
-  eff_mat <- z_mat * sign_vec
+  # 04 对齐口径：用 log2(norm+1) 的绝对表达做通路 raw score
+  # 先乘 sign 与 weight，再对通路内基因做简单平均（而不是除以 sum(weight) 的加权平均）
+  eff_expr <- sweep(expr_sub, 1, sign_vec * w_vec, FUN = "*")
+  raw_score <- colMeans(eff_expr, na.rm = TRUE)
 
-  # 加权平均（按基因权重）
-  score <- colSums(eff_mat * w_vec, na.rm = TRUE) / sum(w_vec)
-  score
+  # 04 对齐口径：对每条通路的 raw_score 做 batch 内 z-score（通路层面标准化）
+  if (!is.null(batch_vec)) {
+    if (length(batch_vec) != length(raw_score)) {
+      stop("[ERROR] compute_score_rna: batch_vec length must equal ncol(expr_mat).")
+    }
+    z_score <- raw_score
+    for (b in unique(batch_vec)) {
+      idx <- which(batch_vec == b)
+      m <- mean(raw_score[idx], na.rm = TRUE)
+      s <- stats::sd(raw_score[idx], na.rm = TRUE)
+      if (is.na(s) || s == 0) s <- 1
+      z_score[idx] <- (raw_score[idx] - m) / s
+    }
+    return(z_score)
+  }
+
+  raw_score
 }
 
 ## 根据 feature set + lipid 矩阵计算 sample-level score
@@ -278,39 +323,43 @@ compute_score_lipid <- function(lipid_mat, feat_tbl) {
   score
 }
 
-## ---------------- 1. 读取 sample_matching -------------------
+## ---------------- 1. 读取 sample_matching / 构造 RNA-only meta -------------------
 
-if (!file.exists(sample_matching)) {
-  stop("[ERROR] 找不到 sample_matching 表: ", sample_matching)
-}
+if (mode != "rna_only") {
+  if (!file.exists(sample_matching)) {
+    stop("[ERROR] 找不到 sample_matching 表: ", sample_matching)
+  }
 
-cat("[STEP1] 读取样本匹配表: ", sample_matching, "\n", sep = "")
-sm <- readr::read_tsv(sample_matching, show_col_types = FALSE)
+  cat("[STEP1] 读取样本匹配表: ", sample_matching, "\n", sep = "")
+  sm <- readr::read_tsv(sample_matching, show_col_types = FALSE)
 
-## 如果只读出了一列，且这一列包含多个用空白分隔的名字，说明分隔符不匹配，尝试用空白分隔重新读取
-if (length(colnames(sm)) == 1 && grepl("\\s+", colnames(sm)[1])) {
-  warning("[WARN] 检测到 sample_matching 只包含一个列名，疑似整行未被拆分，将使用 read_table() 以空白分隔重新读取。")
-  sm <- readr::read_table(sample_matching, show_col_types = FALSE)
-}
+  # If only one column due to delimiter issues, retry with whitespace
+  if (length(colnames(sm)) == 1 && grepl("\\s+", colnames(sm)[1])) {
+    warning("[WARN] 检测到 sample_matching 只包含一个列名，疑似整行未被拆分，将使用 read_table() 以空白分隔重新读取。")
+    sm <- readr::read_table(sample_matching, show_col_types = FALSE)
+  }
 
-## 再做一次列名清洗（去掉 BOM 和首尾空白）
-colnames(sm) <- gsub("\ufeff", "", colnames(sm))
-colnames(sm) <- trimws(colnames(sm))
+  colnames(sm) <- gsub("\ufeff", "", colnames(sm))
+  colnames(sm) <- trimws(colnames(sm))
 
-required_sm_cols <- c("sample_id", "group", "batch", "rna_sample_id", "lipid_sample_id")
-if (!all(required_sm_cols %in% colnames(sm))) {
-  stop("[ERROR] sample_matching 必须包含列: ",
-       paste(required_sm_cols, collapse = ", "),
-       "\n实际列名: ", paste(colnames(sm), collapse = ", "))
-}
+  required_sm_cols <- c("sample_id", "group", "batch", "rna_sample_id", "lipid_sample_id")
+  if (!all(required_sm_cols %in% colnames(sm))) {
+    stop("[ERROR] sample_matching 必须包含列: ",
+         paste(required_sm_cols, collapse = ", "),
+         "\n实际列名: ", paste(colnames(sm), collapse = ", "))
+  }
 
-cat("  [sample_matching] nrow = ", nrow(sm), "\n", sep = "")
-## 仅用于跨组学中介：只使用有 RNA+lipid 配对的 batch1
-sm <- sm %>%
-  dplyr::filter(.data$batch == "batch1")
-cat("  [sample_matching] after filter batch1, nrow = ", nrow(sm), "\n", sep = "")
-if (nrow(sm) == 0) {
-  stop("[ERROR] sample_matching 过滤 batch1 后没有样本，请检查 batch 列是否为 batch1。")
+  cat("  [sample_matching] nrow = ", nrow(sm), "\n", sep = "")
+  # paired-mode: only use batch1
+  sm <- sm %>% dplyr::filter(.data$batch == "batch1")
+  cat("  [sample_matching] after filter batch1, nrow = ", nrow(sm), "\n", sep = "")
+  if (nrow(sm) == 0) {
+    stop("[ERROR] sample_matching 过滤 batch1 后没有样本，请检查 batch 列是否为 batch1。")
+  }
+
+} else {
+  cat("[STEP1] RNA-only 模式：不读取 sample_matching，直接从 counts/metadata 构造样本信息。\n")
+  sm <- NULL
 }
 ## ---------------- 2. 读取 RNA counts 并构建 expr_mat -------
 
@@ -325,10 +374,16 @@ if (!"GeneID" %in% colnames(rna_counts_tbl)) {
   stop("[ERROR] RNA counts 表中缺少 GeneID 列。")
 }
 
-rna_samples <- unique(sm$rna_sample_id)
+if (mode == "rna_only") {
+  # all sample columns except GeneID
+  rna_samples <- setdiff(colnames(rna_counts_tbl), "GeneID")
+} else {
+  rna_samples <- unique(sm$rna_sample_id)
+}
+
 missing_rna_samples <- setdiff(rna_samples, colnames(rna_counts_tbl))
 if (length(missing_rna_samples) > 0) {
-  stop("[ERROR] 下列 rna_sample_id 在 RNA counts 表中找不到列: ",
+  stop("[ERROR] 下列 RNA sample 列在 counts 表中找不到: ",
        paste(missing_rna_samples, collapse = ", "))
 }
 
@@ -337,16 +392,55 @@ rna_expr_log2 <- rna_counts_tbl %>%
   column_to_rownames("GeneID") %>%
   as.matrix()
 # batch 向量（与 rna_expr_log2 的列顺序一致）
-rna_sample_batch <- sm %>%
-  dplyr::select(rna_sample_id, batch) %>%
-  distinct() %>%
-  dplyr::filter(rna_sample_id %in% colnames(rna_expr_log2)) %>%
-  dplyr::arrange(match(rna_sample_id, colnames(rna_expr_log2)))
+if (mode != "rna_only") {
+  rna_sample_batch <- sm %>%
+    dplyr::select(rna_sample_id, batch) %>%
+    distinct() %>%
+    dplyr::filter(rna_sample_id %in% colnames(rna_expr_log2)) %>%
+    dplyr::arrange(match(rna_sample_id, colnames(rna_expr_log2)))
 
-if (!all(rna_sample_batch$rna_sample_id == colnames(rna_expr_log2))) {
-  stop("[ERROR] rna_sample_batch 与 rna_expr_log2 列对齐失败。")
+  if (!all(rna_sample_batch$rna_sample_id == colnames(rna_expr_log2))) {
+    stop("[ERROR] rna_sample_batch 与 rna_expr_log2 列对齐失败。")
+  }
+  rna_batch_vec <- rna_sample_batch$batch
+
+} else {
+  # build meta from optional file or infer from sample names
+  if (nchar(rna_sample_meta_tsv) > 0 && file.exists(rna_sample_meta_tsv)) {
+    meta <- readr::read_tsv(rna_sample_meta_tsv, show_col_types = FALSE)
+    # accept either group or genotype
+    if (!all(c("sample_id", "batch") %in% colnames(meta))) {
+      stop("[ERROR] rna_sample_meta_tsv 必须至少包含列: sample_id, batch。")
+    }
+    if (!"group" %in% colnames(meta) && "genotype" %in% colnames(meta)) {
+      meta <- meta %>% dplyr::rename(group = genotype)
+    }
+    if (!"group" %in% colnames(meta)) {
+      meta$group <- NA_character_
+    }
+    meta <- meta %>% dplyr::filter(sample_id %in% colnames(rna_expr_log2))
+  } else {
+    meta <- tibble::tibble(sample_id = colnames(rna_expr_log2)) %>%
+      dplyr::mutate(
+        batch = stringr::str_extract(sample_id, "batch[0-9]+"),
+        group = dplyr::case_when(
+          stringr::str_detect(sample_id, "WT") ~ "WT",
+          stringr::str_detect(sample_id, "HO") ~ "HO",
+          stringr::str_detect(sample_id, "KO") ~ "HO",
+          TRUE ~ NA_character_
+        )
+      )
+  }
+
+  if (any(is.na(meta$batch))) {
+    warning("[WARN] RNA-only: 有样本未能推断 batch（batch\\d+），将赋值为 'batch1'（仅用于批内 z-score）。")
+    meta$batch[is.na(meta$batch)] <- "batch1"
+  }
+
+  meta <- meta %>% dplyr::arrange(match(sample_id, colnames(rna_expr_log2)))
+  rna_batch_vec <- meta$batch
+  rna_only_meta <- meta
 }
-rna_batch_vec <- rna_sample_batch$batch
 
  # 使用 size factor 对 raw counts 做归一化，避免 KO/WT library size 差异导致 sample-level 分数翻号
 sf <- estimate_size_factors_median_ratio(rna_expr_log2)
@@ -552,9 +646,15 @@ has_lipid_scores <- FALSE
 
 ## ---- STEP5: 计算 / 读取脂质 Y_score_lipid ---------------------------------
 
-precomp_lipid_path <- cfg$precomputed_lipid_axis_scores
+# RNA-only 模式下不应触碰任何 lipid 逻辑（sm 为 NULL），直接跳过
+if (mode == "rna_only") {
+  cat("\n[STEP5] RNA-only：跳过脂质 Y_score_lipid 读取/计算。\n")
+  precomp_lipid_path <- NULL
+} else {
+  precomp_lipid_path <- cfg$precomputed_lipid_axis_scores
+}
 
-if (!is.null(precomp_lipid_path) && file.exists(precomp_lipid_path)) {
+if (mode != "rna_only" && !is.null(precomp_lipid_path) && file.exists(precomp_lipid_path)) {
 
   message("[STEP5] 使用预计算好的脂质轴分数表: ", precomp_lipid_path)
 
@@ -608,7 +708,7 @@ if (!is.null(precomp_lipid_path) && file.exists(precomp_lipid_path)) {
   has_lipid_scores <- TRUE
 
 
-} else {
+} else if (mode != "rna_only") {
 
   # 没有预计算表，再看要不要走旧的“从 lipid_matrix 重算”逻辑
   lipid_matrix_path        <- cfg$lipid_matrix
@@ -627,6 +727,35 @@ if (!is.null(precomp_lipid_path) && file.exists(precomp_lipid_path)) {
     ## ...
   }
 }
+#
+# ---------------- RNA-only output and early exit ----------------
+if (mode == "rna_only") {
+  cat("\n[STEP6] RNA-only：汇总样本级 X/M/Z 并写出 sample_scores_rna_only.tsv ...\n")
+
+  score_tbl_rna_only <- tibble::tibble(
+    sample_id     = colnames(rna_expr_log2),
+    rna_sample_id = colnames(rna_expr_log2)
+  ) %>%
+    dplyr::left_join(M_score_df, by = "rna_sample_id") %>%
+    dplyr::left_join(Y_score_df, by = "rna_sample_id")
+
+  # attach batch/group if available
+  if (exists("rna_only_meta")) {
+    score_tbl_rna_only <- score_tbl_rna_only %>%
+      dplyr::left_join(rna_only_meta %>% dplyr::rename(rna_sample_id = sample_id), by = "rna_sample_id") %>%
+      dplyr::select(sample_id, group, batch, rna_sample_id, dplyr::everything())
+  }
+
+  out_path_rna_only <- file.path(outdir, "sample_scores_rna_only.tsv")
+  readr::write_tsv(score_tbl_rna_only, out_path_rna_only)
+
+  cat("  [OK] 写出 RNA-only 样本级宽表: ", out_path_rna_only, "\n", sep = "")
+  cat("============================================================\n")
+  cat("[DONE] 05_rna_lipid_sample_scores.R (mode=rna_only) 完成。\n")
+  cat("============================================================\n")
+  quit(save = "no", status = 0)
+}
+
 ## ---------------- 6. 汇总样本级得分并写出 -------------------
 
 cat("\n[STEP6] 汇总样本级得分并写出...\n")
@@ -648,7 +777,7 @@ cat("          多列 RNA M 候选通路分数、RNA Y 候选轴/通路分数",
     if (has_lipid_scores) "，以及一组脂质轴得分列。\n" else "。\n", sep = "")
 
 cat("============================================================\n")
-cat("[DONE] 07_rna_lipid_sample_scores.R 完成。\n")
+cat("[DONE] 05_rna_lipid_sample_scores.R 完成。\n")
 cat("  下一步：可将此表作为 08_mediation_analysis_minimal.R 的输入，\n")
 cat("          选择适当的 M_score / Y_score 列进行中介分析。\n")
 cat("============================================================\n")

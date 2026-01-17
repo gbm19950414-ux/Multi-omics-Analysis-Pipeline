@@ -1,3 +1,4 @@
+mode: rna_only
 # 1) RNA raw counts 矩阵（featureCounts 输出）
 rna_counts: "data/processed/rna/all_batches_featureCounts.tsv"
 
@@ -13,9 +14,9 @@ ephb1_M_pathway: ""
 ephb1_M_registry: "scripts/multi/ephb1_downstream_signaling_sets_gene_registry.tsv"
 
 # 5) 机制轴 Y（RNA 版）的 gene set YAML + axis 名称
-upstream_M_yaml: "scripts/multi/rna_upstream_pathway_sets.yaml"
+upstream_M_yaml: "scripts/rna/rna_mechanistic_gene_sets.yaml"
 upstream_M_axis: ""
-upstream_M_registry: "scripts/multi/rna_upstream_pathway_sets_gene_registry.tsv"
+upstream_M_registry: "scripts/rna/rna_mechanistic_gene_sets_gene_registry.tsv"
 
 # 6) 脂质版 Y：使用的 axis feature 集（可选）
 #   这里我设计为一个简单 TSV，而不是 YAML，方便你手动/脚本生成：
