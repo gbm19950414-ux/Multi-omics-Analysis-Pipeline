@@ -152,18 +152,64 @@ dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
 ## ---------------- helpers ------------------------------------
 
 ## 按行对矩阵做 z-score（每个 feature 在样本间标准化）
-row_zscore <- function(mat) {
-  m <- rowMeans(mat, na.rm = TRUE)
-  s <- apply(mat, 1, sd, na.rm = TRUE)
-  s[s == 0 | is.na(s)] <- 1
-  z <- (mat - m) / s
+## 按行对矩阵做 z-score（每个 feature 在样本间标准化）
+## 支持 batch 内标准化：同一基因在每个 batch 内单独做 z-score
+row_zscore <- function(mat, batch_vec = NULL) {
+  if (is.null(batch_vec)) {
+    m <- rowMeans(mat, na.rm = TRUE)
+    s <- apply(mat, 1, sd, na.rm = TRUE)
+    s[s == 0 | is.na(s)] <- 1
+    return((mat - m) / s)
+  }
+
+  if (length(batch_vec) != ncol(mat)) {
+    stop("[ERROR] row_zscore: batch_vec length must equal ncol(mat).")
+  }
+
+  z <- mat
+  for (b in unique(batch_vec)) {
+    idx <- which(batch_vec == b)
+    sub <- mat[, idx, drop = FALSE]
+    m <- rowMeans(sub, na.rm = TRUE)
+    s <- apply(sub, 1, sd, na.rm = TRUE)
+    s[s == 0 | is.na(s)] <- 1
+    z[, idx] <- (sub - m) / s
+  }
   z
 }
 
+## 估计 RNA counts 的 size factors（DESeq2 median-of-ratios 思路的轻量实现）
+## 输入：raw counts matrix [genes x samples]
+## 输出：named numeric 向量，每个样本一个 size factor
+estimate_size_factors_median_ratio <- function(count_mat) {
+  # geometric mean per gene (ignore zeros)
+  gm <- apply(count_mat, 1, function(x) {
+    x <- x[x > 0]
+    if (length(x) == 0) return(NA_real_)
+    exp(mean(log(x)))
+  })
+
+  keep <- !is.na(gm) & gm > 0
+  if (sum(keep) < 100) {
+    warning("[WARN] 可用于 size factor 的基因过少（<100）。size factor 可能不稳定。")
+  }
+
+  ratios <- sweep(count_mat[keep, , drop = FALSE], 1, gm[keep], FUN = "/")
+  sf <- apply(ratios, 2, function(r) stats::median(r[r > 0 & is.finite(r)], na.rm = TRUE))
+
+  sf[is.na(sf) | sf <= 0] <- 1
+  # normalize to geometric mean 1
+  sf <- sf / exp(mean(log(sf)))
+  sf
+}
 ## 根据 gene 表 + RNA expr 矩阵计算 sample-level score
 ## expr_mat: matrix[genes x samples]，行名为 GeneID
 ## gene_tbl: 必须包含列 GeneID, effect_sign_col
-compute_score_rna <- function(expr_mat, gene_tbl, effect_sign_col = "gene_effect_sign") {
+compute_score_rna <- function(expr_mat,
+                              gene_tbl,
+                              effect_sign_col = "gene_effect_sign",
+                              weight_col = "weight",
+                              batch_vec = NULL) {
   gene_tbl <- gene_tbl %>%
     filter(!is.na(GeneID)) %>%
     distinct(GeneID, .keep_all = TRUE)
@@ -185,10 +231,18 @@ compute_score_rna <- function(expr_mat, gene_tbl, effect_sign_col = "gene_effect
   sign_vec <- as.numeric(gene_tbl_sub[[effect_sign_col]])
   sign_vec[is.na(sign_vec)] <- 1
 
-  z_mat <- row_zscore(expr_sub)
+  w_vec <- if (weight_col %in% colnames(gene_tbl_sub)) {
+    as.numeric(gene_tbl_sub[[weight_col]])
+  } else {
+    rep(1, nrow(gene_tbl_sub))
+  }
+  w_vec[is.na(w_vec) | w_vec <= 0] <- 1
+
+  z_mat <- row_zscore(expr_sub, batch_vec = batch_vec)
   eff_mat <- z_mat * sign_vec
 
-  score <- colMeans(eff_mat, na.rm = TRUE)
+  # 加权平均（按基因权重）
+  score <- colSums(eff_mat * w_vec, na.rm = TRUE) / sum(w_vec)
   score
 }
 
@@ -251,7 +305,13 @@ if (!all(required_sm_cols %in% colnames(sm))) {
 }
 
 cat("  [sample_matching] nrow = ", nrow(sm), "\n", sep = "")
-
+## 仅用于跨组学中介：只使用有 RNA+lipid 配对的 batch1
+sm <- sm %>%
+  dplyr::filter(.data$batch == "batch1")
+cat("  [sample_matching] after filter batch1, nrow = ", nrow(sm), "\n", sep = "")
+if (nrow(sm) == 0) {
+  stop("[ERROR] sample_matching 过滤 batch1 后没有样本，请检查 batch 列是否为 batch1。")
+}
 ## ---------------- 2. 读取 RNA counts 并构建 expr_mat -------
 
 if (!file.exists(rna_counts)) {
@@ -276,7 +336,21 @@ rna_expr_log2 <- rna_counts_tbl %>%
   dplyr::select(GeneID, dplyr::all_of(rna_samples)) %>%
   column_to_rownames("GeneID") %>%
   as.matrix()
+# batch 向量（与 rna_expr_log2 的列顺序一致）
+rna_sample_batch <- sm %>%
+  dplyr::select(rna_sample_id, batch) %>%
+  distinct() %>%
+  dplyr::filter(rna_sample_id %in% colnames(rna_expr_log2)) %>%
+  dplyr::arrange(match(rna_sample_id, colnames(rna_expr_log2)))
 
+if (!all(rna_sample_batch$rna_sample_id == colnames(rna_expr_log2))) {
+  stop("[ERROR] rna_sample_batch 与 rna_expr_log2 列对齐失败。")
+}
+rna_batch_vec <- rna_sample_batch$batch
+
+ # 使用 size factor 对 raw counts 做归一化，避免 KO/WT library size 差异导致 sample-level 分数翻号
+sf <- estimate_size_factors_median_ratio(rna_expr_log2)
+rna_expr_log2 <- sweep(rna_expr_log2, 2, sf, FUN = "/")
 rna_expr_log2 <- log2(rna_expr_log2 + 1)
 
 cat("  [rna_expr_log2] genes = ", nrow(rna_expr_log2),
@@ -316,7 +390,8 @@ M_gene_tbl_sym <- purrr::imap_dfr(
       tibble::tibble(
         pathway          = pw_name,
         gene_symbol      = g$name,
-        gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
+        gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1),
+        weight           = as.numeric(g$weight %||% 1)
       )
     })
   }
@@ -350,7 +425,10 @@ cat("  [RNA M gene set] n_pathway = ", length(unique(M_gene_tbl$pathway)),
 M_scores_list <- M_gene_tbl %>%
   dplyr::filter(!is.na(GeneID)) %>%
   split(.$pathway) %>%
-  purrr::map(~ compute_score_rna(rna_expr_log2, .x, effect_sign_col = "gene_effect_sign"))
+  purrr::map(~ compute_score_rna(rna_expr_log2, .x,
+                  effect_sign_col = "gene_effect_sign",
+                  weight_col = "weight",
+                  batch_vec = rna_batch_vec))
 
 M_score_df <- tibble::tibble(rna_sample_id = colnames(rna_expr_log2))
 for (pw_name in names(M_scores_list)) {
@@ -385,7 +463,8 @@ if (!is.null(Y_cfg$axes)) {
               axis             = character(0),
               module           = character(0),
               gene_symbol      = character(0),
-              gene_effect_sign = numeric(0)
+              gene_effect_sign = numeric(0),
+              weight           = numeric(0)
             ))
           }
           purrr::map_dfr(genes, function(g) {
@@ -393,7 +472,8 @@ if (!is.null(Y_cfg$axes)) {
               axis             = axis_name,
               module           = mod_name,
               gene_symbol      = g$name,
-              gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
+              gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1),
+              weight           = as.numeric(g$weight %||% 1)
             )
           })
         }
@@ -410,7 +490,8 @@ if (!is.null(Y_cfg$axes)) {
           axis             = character(0),
           module           = character(0),
           gene_symbol      = character(0),
-          gene_effect_sign = numeric(0)
+          gene_effect_sign = numeric(0),
+          weight           = numeric(0)
         ))
       }
       purrr::map_dfr(genes, function(g) {
@@ -418,7 +499,8 @@ if (!is.null(Y_cfg$axes)) {
           axis             = pw_name,
           module           = NA_character_,
           gene_symbol      = g$name,
-          gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1)
+          gene_effect_sign = as.numeric(g$gene_effect_sign %||% 1),
+          weight           = as.numeric(g$weight %||% 1)
         )
       })
     }
@@ -454,7 +536,10 @@ cat("  [RNA Y axis/pathway gene set] n_axis/pathway = ", length(unique(Y_gene_tb
 Y_scores_list <- Y_gene_tbl %>%
   dplyr::filter(!is.na(GeneID)) %>%
   split(.$axis) %>%
-  purrr::map(~ compute_score_rna(rna_expr_log2, .x, effect_sign_col = "gene_effect_sign"))
+  purrr::map(~ compute_score_rna(rna_expr_log2, .x,
+                  effect_sign_col = "gene_effect_sign",
+                  weight_col = "weight",
+                  batch_vec = rna_batch_vec))
 
 Y_score_df <- tibble::tibble(rna_sample_id = colnames(rna_expr_log2))
 for (axis_name in names(Y_scores_list)) {
