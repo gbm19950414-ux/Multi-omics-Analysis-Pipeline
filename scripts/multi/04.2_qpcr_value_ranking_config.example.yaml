@@ -1,0 +1,18 @@
+# 04.2_qpcr_value_ranking_config.example.yaml
+# 用法：Rscript 04.2_ephb1_qpcr_value_ranking_from_gene_sets.R 04.2_qpcr_value_ranking_config.yaml
+
+# 与 04_EphB1下游通路活性评估_rna_ephb1_downstream_scores.R 保持一致的目录约定
+
+deseq2_outdir: "results/rna/deseq2/interaction"
+lfc_table: "interaction_summary_with_perBatchLFC.tsv"  # 需要包含 GeneID, IC_*, LFC_batch1/2/3...
+
+downstream_gene_set_yaml: "scripts/multi/ephb1_downstream_signaling_sets.yaml"
+
+outdir: "results/multiomics/tables/qpcr_value_ranking"
+
+# 选择规则（可按工作量与稳定性调）
+top_n: 10          # Tier1 推荐数量
+tier2_n: 20       # Tier2 上限（含 Tier1）
+min_batches_present: 2
+min_effect_abs: 0.20
+min_sign_consistency: 0.67

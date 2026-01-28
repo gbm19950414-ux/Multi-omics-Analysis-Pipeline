@@ -1,0 +1,10 @@
+pathway	axis	n_total	n_eligible	n_tier1	topN_gene_symbols	ranking_file
+EphB1_AMPK_energy_sensing	EphB1_signaling	10	10	0	Ppargc1a,Tsc1,Prkab2,Prkaa2,Tsc2,Sirt1,Ppargc1b,Prkab1,Prkag1,Prkaa1	results/multiomics/tables/qpcr_value_ranking/EphB1_AMPK_energy_sensing_qpcr_value_ranking.tsv
+EphB1_cytoskeleton_FAQ_Src_Rho	EphB1_signaling	23	23	0	Myl9,Yes1,Ephb1,Limk2,Efnb2,Vav2,Lyn,Arhgap35,Ptk2,Efnb1	results/multiomics/tables/qpcr_value_ranking/EphB1_cytoskeleton_FAQ_Src_Rho_qpcr_value_ranking.tsv
+EphB1_integrin_caveolae_membrane_microdomain	EphB1_signaling	12	12	0	Itgb3,Fermt2,Cav1,Tln2,Tln1,Vcl,Cav2,Itga5,Flot1,Pxn	results/multiomics/tables/qpcr_value_ranking/EphB1_integrin_caveolae_membrane_microdomain_qpcr_value_ranking.tsv
+EphB1_JAK_STAT_inflammatory	EphB1_signaling	16	16	1	Ifit3,Socs3,Irf7,Ifit1,Isg15,Socs1,Stat2,Stat1,Jak2,Stat3	results/multiomics/tables/qpcr_value_ranking/EphB1_JAK_STAT_inflammatory_qpcr_value_ranking.tsv
+EphB1_MAPK_ERK_p38_JNK	EphB1_signaling	24	24	0	Mapk10,Fos,Mapk12,Mapk8,Map2k1,Dusp1,Dusp4,Dusp6,Mapk9,Mapk3	results/multiomics/tables/qpcr_value_ranking/EphB1_MAPK_ERK_p38_JNK_qpcr_value_ranking.tsv
+EphB1_mito_stress_cell_death	EphB1_signaling	17	17	1	Bnip3,Mlkl,Casp1,Ddit3,Gsdmd,Bcl2,Bak1,Pycard,Atf4,Tnfrsf1a	results/multiomics/tables/qpcr_value_ranking/EphB1_mito_stress_cell_death_qpcr_value_ranking.tsv
+EphB1_NFkB_inflammation_ROS	EphB1_signaling	15	15	1	Cxcl10,Il1b,Il6,Tnf,Ccl2,Relb,Nfkbia,Rela,Chuk,Nfkbie	results/multiomics/tables/qpcr_value_ranking/EphB1_NFkB_inflammation_ROS_qpcr_value_ranking.tsv
+EphB1_PGC1_NRF_mito_biogenesis	EphB1_signaling	13	12	0	Ppargc1a,Nfe2l2,Creb1,Ndufa9,Esrra,Nrf1,Tfb2m,Cox4i1,Atp5f1a,Ppargc1b	results/multiomics/tables/qpcr_value_ranking/EphB1_PGC1_NRF_mito_biogenesis_qpcr_value_ranking.tsv
+EphB1_PI3K_AKT_mTOR	EphB1_signaling	20	20	1	Inpp4b,Pik3ip1,Rps6kb2,Phlpp2,Phlpp1,Pik3cb,Pik3ca,Akt3,Eif4ebp1,Mtor	results/multiomics/tables/qpcr_value_ranking/EphB1_PI3K_AKT_mTOR_qpcr_value_ranking.tsv
