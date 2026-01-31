@@ -91,7 +91,7 @@ if (file.exists(config_path)) {
 
 deseq2_outdir_default     <- "results/rna/deseq2/interaction"
 lfc_table_default         <- "interaction_summary_with_perBatchLFC.tsv"
-downstream_yaml_default   <- "scripts/multi/ephb1_downstream_signaling_sets.yaml"
+downstream_yaml_default   <- "scripts/multi/geneset_for_qPCR.yaml"
 outdir_default            <- "results/multiomics/tables/qpcr_value_ranking"
 
 top_n_default             <- 10

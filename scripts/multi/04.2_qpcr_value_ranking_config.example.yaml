@@ -6,7 +6,7 @@
 deseq2_outdir: "results/rna/deseq2/interaction"
 lfc_table: "interaction_summary_with_perBatchLFC.tsv"  # 需要包含 GeneID, IC_*, LFC_batch1/2/3...
 
-downstream_gene_set_yaml: "scripts/multi/ephb1_downstream_signaling_sets.yaml"
+downstream_gene_set_yaml: "scripts/multi/geneset_for_qPCR.yaml"
 
 outdir: "results/multiomics/tables/qpcr_value_ranking"
 

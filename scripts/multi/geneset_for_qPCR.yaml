@@ -1,219 +1,527 @@
-EphB1_PI3K_AKT_mTOR_capacity:
-  axis: "EphB1_signaling"
-  target_mechanistic_axes:
-    - "Synthesis"
-    - "Supply"
-  label: "PI3K–AKT–mTOR signaling downstream of EphB1"
-  description: >
-    EphB1 可通过 PI3K–AKT–mTOR 轴调节细胞生长、代谢和生物能量状态。
-    该模块包含 I 类 PI3K 催化/调节亚基、AKT 家族成员以及 mTORC1/2
-    相关成分和典型下游靶点（如 S6K、4EBP1），其活性变化可影响
-    PGC-1α/NRF1 等线粒体生物发生共激活子的转录活性。
-  genes:
-    # PI3K catalytic & regulatory subunits
-    - name: Pik3ca
-      gene_effect_sign: 1
-      weight: 0.3
-    - name: Pik3cb
-      gene_effect_sign: 1
-      weight: 0.3
-    - name: Pik3cd
-      gene_effect_sign: 1
-      weight: 0.3
-    - name: Pik3r1
-      gene_effect_sign: 1
-      weight: 0.3
-    - name: Pik3r2
-      gene_effect_sign: 1
-      weight: 0.3
+# 本基因集中所有方向均为：分数越高，障碍越严重
+pathways:
 
-    # AKT kinases
-    - name: Akt1
-      gene_effect_sign: 1
-      weight: 0.3
-    - name: Akt2
-      gene_effect_sign: 1
-      weight: 0.3
-    - name: Akt3
-      gene_effect_sign: 1
-      weight: 0.3
+  EphB1_PI3K_AKT_mTOR_capacity:
+    axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Synthesis"
+      - "Supply"
+    label: "PI3K–AKT–mTOR signaling downstream of EphB1"
+    description: >
+      EphB1 可通过 PI3K–AKT–mTOR 轴调节细胞生长、代谢和生物能量状态。
+      该模块包含 I 类 PI3K 催化/调节亚基、AKT 家族成员以及 mTORC1/2
+      相关成分和典型下游靶点（如 S6K、4EBP1），其活性变化可影响
+      PGC-1α/NRF1 等线粒体生物发生共激活子的转录活性。
+    genes:
+      # PI3K catalytic & regulatory subunits
+      - name: Pik3ca
+        gene_effect_sign: 1
+        weight: 0.3
+      - name: Pik3cb
+        gene_effect_sign: 1
+        weight: 0.3
+      - name: Pik3cd
+        gene_effect_sign: 1
+        weight: 0.3
+      - name: Pik3r1
+        gene_effect_sign: 1
+        weight: 0.3
+      - name: Pik3r2
+        gene_effect_sign: 1
+        weight: 0.3
 
-    # mTOR complexes & regulators
-    - name: Mtor
-      gene_effect_sign: 1
-      weight: 0.3
-    - name: Rptor      # mTORC1
-      gene_effect_sign: 1
-      weight: 0.3
-    - name: Rictor     # mTORC2
-      gene_effect_sign: 1
-      weight: 0.3
-    - name: Mlst8
-      gene_effect_sign: 1
-      weight: 0.3
+      # AKT kinases
+      - name: Akt1
+        gene_effect_sign: 1
+        weight: 0.3
+      - name: Akt2
+        gene_effect_sign: 1
+        weight: 0.3
+      - name: Akt3
+        gene_effect_sign: 1
+        weight: 0.3
 
-    # pi3k抑制子，20260115新增
-    - name: Pten
-      gene_effect_sign: -1
-      weight: 0.3
-    - name: Pik3ip1
-      gene_effect_sign: -1
-      weight: 0.3
-    - name: Inpp4b
-      gene_effect_sign: -1
-      weight: 0.3
-    - name: Phlpp1
-      gene_effect_sign: -1
-      weight: 0.3
-    - name: Phlpp2
-      gene_effect_sign: -1
-      weight: 0.3
+      # mTOR complexes & regulators
+      - name: Mtor
+        gene_effect_sign: 1
+        weight: 0.3
+      - name: Rptor      # mTORC1
+        gene_effect_sign: 1
+        weight: 0.3
+      - name: Rictor     # mTORC2
+        gene_effect_sign: 1
+        weight: 0.3
+      - name: Mlst8
+        gene_effect_sign: 1
+        weight: 0.3
 
-    # downstream effectors (translation & growth)
-    - name: Rps6kb1    # S6K1
-      gene_effect_sign: 1
-      weight: 0.7
-    - name: Rps6kb2    # S6K2
-      gene_effect_sign: 1
-      weight: 0.7
-    - name: Eif4ebp1   # 4EBP1
-      gene_effect_sign: 1
-      weight: 0.7
+      # pi3k抑制子，20260115新增
+      - name: Pten
+        gene_effect_sign: -1
+        weight: 0.3
+      - name: Pik3ip1
+        gene_effect_sign: -1
+        weight: 0.3
+      - name: Inpp4b
+        gene_effect_sign: -1
+        weight: 0.3
+      - name: Phlpp1
+        gene_effect_sign: -1
+        weight: 0.3
+      - name: Phlpp2
+        gene_effect_sign: -1
+        weight: 0.3
 
-Flux limitation:
-  description: >
-    膜磷脂库缩水（PC/PE/PI/PS/PG/CL 共同下降）+ TG 上升，常由“合成/供给通量受限”
-    驱动：包括 de novo 脂肪酸与甘油骨架供给、ER 侧磷脂合成节点，以及线粒体侧 CDP-DAG→PG/CL
-    分支的前体通量。该轴用于检验“合成/供给不足是否为主要障碍来源”。
-  modules:
+      # downstream effectors (translation & growth)
+      - name: Rps6kb1    # S6K1
+        gene_effect_sign: 1
+        weight: 0.7
+      - name: Rps6kb2    # S6K2
+        gene_effect_sign: 1
+        weight: 0.7
+      - name: Eif4ebp1   # 4EBP1
+        gene_effect_sign: 1
+        weight: 0.7
 
-    gene_set:
-      label: "Transcriptomic gene set for Flux limitation axis"
-      description: >
-        手工构建：覆盖脂肪酸与甘油骨架供给、Kennedy pathway（PC/PE）、CDP-DAG branch（PI/PG/CL）
-        以及 PS 合成/交换等关键瓶颈节点。分数高=障碍重，因此能力基因取 -1。
-      genes:
-        # de novo FA synthesis / acetyl-CoA → malonyl-CoA → FA
-        - name: Acly
-          gene_effect_sign: -1
-          weight: 1.0
-        - name: Acaca
-          gene_effect_sign: -1
-          weight: 1.0
-        - name: Fasn
-          gene_effect_sign: -1
-          weight: 1.0
+  Flux limitation:
+    description: >
+      膜磷脂库缩水（PC/PE/PI/PS/PG/CL 共同下降）+ TG 上升，常由“合成/供给通量受限”
+      驱动：包括 de novo 脂肪酸与甘油骨架供给、ER 侧磷脂合成节点，以及线粒体侧 CDP-DAG→PG/CL
+      分支的前体通量。该轴用于检验“合成/供给不足是否为主要障碍来源”。
+    modules:
 
-        # glycerol backbone & PA/DAG formation
-        - name: Gpam
-          gene_effect_sign: -1
-          weight: 1.0
-        - name: Agpat2
-          gene_effect_sign: -1
-          weight: 0.7
-        - name: Lpin1
-          gene_effect_sign: -1
-          weight: 0.7
+      gene_set:
+        label: "Transcriptomic gene set for Flux limitation axis"
+        description: >
+          手工构建：覆盖脂肪酸与甘油骨架供给、Kennedy pathway（PC/PE）、CDP-DAG branch（PI/PG/CL）
+          以及 PS 合成/交换等关键瓶颈节点。分数高=障碍重，因此能力基因取 -1。
+    genes:
+      # de novo FA synthesis / acetyl-CoA → malonyl-CoA → FA
+      - name: Acly
+        gene_effect_sign: -1
+        weight: 1.0
+      - name: Acaca
+        gene_effect_sign: -1
+        weight: 1.0
+      - name: Fasn
+        gene_effect_sign: -1
+        weight: 1.0
 
-        # Kennedy pathway (PC/PE)
-        - name: Chka
-          gene_effect_sign: -1
-          weight: 0.7
-        - name: Pcyt1a
-          gene_effect_sign: -1
-          weight: 1.0
-        - name: Cept1
-          gene_effect_sign: -1
-          weight: 0.7
-        - name: Etnk1
-          gene_effect_sign: -1
-          weight: 0.5
-        - name: Pcyt2
-          gene_effect_sign: -1
-          weight: 0.7
+      # glycerol backbone & PA/DAG formation
+      - name: Gpam
+        gene_effect_sign: -1
+        weight: 1.0
+      - name: Agpat2
+        gene_effect_sign: -1
+        weight: 0.7
+      - name: Lpin1
+        gene_effect_sign: -1
+        weight: 0.7
 
-        # CDP-DAG branch (PI/PG/CL)
-        - name: Cds1
-          gene_effect_sign: -1
-          weight: 0.7
-        - name: Cdipt
-          gene_effect_sign: -1
-          weight: 0.7
-        - name: Pgs1
-          gene_effect_sign: -1
-          weight: 0.7
-        - name: Crls1
-          gene_effect_sign: -1
-          weight: 0.7
+      # Kennedy pathway (PC/PE)
+      - name: Chka
+        gene_effect_sign: -1
+        weight: 0.7
+      - name: Pcyt1a
+        gene_effect_sign: -1
+        weight: 1.0
+      - name: Cept1
+        gene_effect_sign: -1
+        weight: 0.7
+      - name: Etnk1
+        gene_effect_sign: -1
+        weight: 0.5
+      - name: Pcyt2
+        gene_effect_sign: -1
+        weight: 0.7
 
-        # PS synthesis/flip (supports PS pool maintenance)
-        - name: Ptdss1
-          gene_effect_sign: -1
-          weight: 0.5
-        - name: Ptdss2
-          gene_effect_sign: -1
-          weight: 0.5
+      # CDP-DAG branch (PI/PG/CL)
+      - name: Cds1
+        gene_effect_sign: -1
+        weight: 0.7
+      - name: Cdipt
+        gene_effect_sign: -1
+        weight: 0.7
+      - name: Pgs1
+        gene_effect_sign: -1
+        weight: 0.7
+      - name: Crls1
+        gene_effect_sign: -1
+        weight: 0.7
 
-Rerouting to TG & breakdown:
-  description: >
-    膜磷脂库下降同时伴随 TG 上升，提示脂质被“从膜磷脂转向储存/脂滴”，并可能伴随
-    PLA2/脂解增强、DAG/FA 被导向 TG 合成。该轴用于检验“重分配到 TG + 周转/分解加快”
-    是否是驱动膜磷脂共同下降的主要障碍来源。
-  modules:
+      # PS synthesis/flip (supports PS pool maintenance)
+      - name: Ptdss1
+        gene_effect_sign: -1
+        weight: 0.5
+      - name: Ptdss2
+        gene_effect_sign: -1
+        weight: 0.5
 
-    gene_set:
-      label: "Transcriptomic gene set for Rerouting to TG & breakdown axis"
-      description: >
-        手工构建：覆盖 TG 合成/脂滴装配、PLA2 介导磷脂水解与脂解回收等过程。分数高=障碍重，
-        因此促 TG/分解基因取 +1。
-      genes:
-        # TG synthesis (DAG → TG)
-        - name: Dgat1
-          gene_effect_sign: 1
-          weight: 1.0
-        - name: Dgat2
-          gene_effect_sign: 1
-          weight: 1.0
+  Rerouting to TG & breakdown:
+    description: >
+      膜磷脂库下降同时伴随 TG 上升，提示脂质被“从膜磷脂转向储存/脂滴”，并可能伴随
+      PLA2/脂解增强、DAG/FA 被导向 TG 合成。该轴用于检验“重分配到 TG + 周转/分解加快”
+      是否是驱动膜磷脂共同下降的主要障碍来源。
+    modules:
 
-        # fatty acid activation & channeling to neutral lipids
-        - name: Acsl1
-          gene_effect_sign: 1
-          weight: 0.7
-        - name: Acsl3
-          gene_effect_sign: 1
-          weight: 0.7
+      gene_set:
+        label: "Transcriptomic gene set for Rerouting to TG & breakdown axis"
+        description: >
+          手工构建：覆盖 TG 合成/脂滴装配、PLA2 介导磷脂水解与脂解回收等过程。分数高=障碍重，
+          因此促 TG/分解基因取 +1。
+    genes:
+      # TG synthesis (DAG → TG)
+      - name: Dgat1
+        gene_effect_sign: 1
+        weight: 1.0
+      - name: Dgat2
+        gene_effect_sign: 1
+        weight: 1.0
 
-        # lipid droplet biogenesis/coating (storage bias)
-        - name: Plin2
-          gene_effect_sign: 1
-          weight: 1.0
-        - name: Plin3
-          gene_effect_sign: 1
-          weight: 0.5
-        - name: Fitm2
-          gene_effect_sign: 1
-          weight: 0.5
+      # fatty acid activation & channeling to neutral lipids
+      - name: Acsl1
+        gene_effect_sign: 1
+        weight: 0.7
+      - name: Acsl3
+        gene_effect_sign: 1
+        weight: 0.7
 
-        # phospholipid hydrolysis / remodeling toward loss (FA release, lysophospholipids)
-        - name: Pla2g6
-          gene_effect_sign: 1
-          weight: 0.7
-        - name: Pnpla8
-          gene_effect_sign: 1
-          weight: 0.5
+      # lipid droplet biogenesis/coating (storage bias)
+      - name: Plin2
+        gene_effect_sign: 1
+        weight: 1.0
+      - name: Plin3
+        gene_effect_sign: 1
+        weight: 0.5
+      - name: Fitm2
+        gene_effect_sign: 1
+        weight: 0.5
 
-        # lipolysis & FA release/recycling (can increase turnover pressure)
-        - name: Pnpla2
-          gene_effect_sign: 1
-          weight: 0.7
-        - name: Lipe
-          gene_effect_sign: 1
-          weight: 0.3
-        - name: Mgll
-          gene_effect_sign: 1
-          weight: 0.5
+      # phospholipid hydrolysis / remodeling toward loss (FA release, lysophospholipids)
+      - name: Pla2g6
+        gene_effect_sign: 1
+        weight: 0.7
+      - name: Pnpla8
+        gene_effect_sign: 1
+        weight: 0.5
 
-        # optional: lipid droplet growth / phospholipid turnover coupling
-        - name: Lpin1
-          gene_effect_sign: 1
-          weight: 0.3
+      # lipolysis & FA release/recycling (can increase turnover pressure)
+      - name: Pnpla2
+        gene_effect_sign: 1
+        weight: 0.7
+      - name: Lipe
+        gene_effect_sign: 1
+        weight: 0.3
+      - name: Mgll
+        gene_effect_sign: 1
+        weight: 0.5
+
+      # optional: lipid droplet growth / phospholipid turnover coupling
+      - name: Lpin1
+        gene_effect_sign: 1
+        weight: 0.3
+
+  EphB1_PI3K_AKT_mTOR_capacity_2:
+    axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Membrane context"
+      - "Supply"
+      - "Synthesis"
+    label: "EphB1–PI3K/AKT–mTOR signaling machinery capacity"
+    description: >
+      生物学事件：PI3K–AKT–mTOR 轴将膜脂第二信使(PIP3)与磷酸化级联转化为生长/代谢程序（mTORC1/2 等）。
+      本基因集定位：capacity（核心节点链路）。纳入 PI3K 催化/调节亚基（Pik3ca/Pik3cb/Pik3r1）、AKT（Akt1/Akt2）、mTOR 及复合体关键组分（Mtor/Rptor/Rictor）与经典刹车（Tsc1/Tsc2），代表该轴传递链路与复合体装配的可用性。
+      解释边界：表达不等于 PIP3 或 p-AKT/p-S6；该集合更贴近“通路组件是否充足/是否处于长期重设”。
+      可能漏纳/可替换：Pdk1(Pdpkl), Pik3cd/γ（免疫特异 PI3K 亚型）、Rheb、Deptor；可能偏宽：Tsc1/2 变化也可能代表应激/营养状态的长期适应。
+    genes:
+      - name: Pik3ca
+        gene_effect_sign: -1
+        weight: 1
+      - name: Pik3cb
+        gene_effect_sign: -1
+        weight: 1
+      - name: Pik3r1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Akt1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Akt2
+        gene_effect_sign: -1
+        weight: 1
+      - name: Mtor
+        gene_effect_sign: -1
+        weight: 1
+      - name: Rptor
+        gene_effect_sign: -1
+        weight: 1
+      - name: Rictor
+        gene_effect_sign: -1
+        weight: 1
+      - name: Pten
+        gene_effect_sign: -1
+        weight: 1
+      - name: Inpp4b
+        gene_effect_sign: -1
+        weight: 1
+      - name: Phlpp1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Phlpp2
+        gene_effect_sign: -1
+        weight: 1
+      - name: Akt1s1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Deptor
+        gene_effect_sign: -1
+        weight: 1
+      - name: Rheb
+        gene_effect_sign: -1
+        weight: 1
+      - name: Tsc1
+        gene_effect_sign: 1
+        weight: 1
+      - name: Tsc2
+        gene_effect_sign: 1
+        weight: 1
+
+  EphB1_PI3K_AKT_mTORC1_SREBP_anabolic_footprint:
+    axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Membrane context"
+      - "Supply"
+      - "Synthesis"
+    label: "EphB1–PI3K/AKT–mTORC1 anabolic footprint (SREBP program)"
+    description: >
+      生物学事件：mTORC1 作为 PI3K–AKT 轴的重要输出端，可驱动细胞生长/同化代谢，并通过 SREBP 程序上调脂肪酸/胆固醇合成与 NADPH 供给。
+      本基因集定位：footprint（输出端读出）。为使“分数越高=通路障碍越高”，该集合对 mTORC1→SREBP 同化输出使用反向计分（gene_effect_sign = -1）。
+      解释边界：该足迹主要反映“mTORC1→SREBP 同化输出”，易受脂质/胆固醇稳态与 ER stress 等非 PI3K 因素影响，因此需要与其它 footprint（如翻译/生长端、FOXO 端）及负控集合联合判读。
+      可能漏纳/可替换：Srebf1 目标（Elovl6, Acss2）、Hmgcs2（情境依赖）、Slc2a1（糖代谢分支）；可能偏宽：胆固醇合成基因也受 ER stress/脂质稳态影响。
+    genes:
+      - name: Srebf1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Srebf2
+        gene_effect_sign: -1
+        weight: 1
+      - name: Insig1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Ldlr
+        gene_effect_sign: -1
+        weight: 1
+      - name: Acly
+        gene_effect_sign: -1
+        weight: 1
+      - name: Acaca
+        gene_effect_sign: -1
+        weight: 1
+      - name: Fasn
+        gene_effect_sign: -1
+        weight: 1
+      - name: Scd1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Hmgcs1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Hmgcr
+        gene_effect_sign: -1
+        weight: 1
+      - name: Mvd
+        gene_effect_sign: -1
+        weight: 1
+      - name: Fdft1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Sqle
+        gene_effect_sign: -1
+        weight: 1
+      - name: Dhcr7
+        gene_effect_sign: -1
+        weight: 1
+      - name: G6pdx
+        gene_effect_sign: -1
+        weight: 1
+      - name: Me1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Idh1
+        gene_effect_sign: -1
+        weight: 1
+
+  EphB1_PI3K_AKT_mTORC1_translation_growth_footprint:
+    axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Membrane context"
+      - "Supply"
+      - "Synthesis"
+    label: "EphB1–PI3K/AKT–mTORC1 growth/translation footprint (ribosome biogenesis/translation program)"
+    description: >
+      生物学事件：mTORC1 促进蛋白翻译与核糖体生物发生（ribosome biogenesis），推动细胞生长与生物合成。
+      本基因集定位：footprint（更贴近‘生长/翻译端’输出），相较于 SREBP 脂质同化链条更少直接受外源脂质供给影响，更接近 PI3K 输入后的生长端转录后果。
+      计分方向：为使“分数越高=通路障碍越高”，该集合采用反向计分（gene_effect_sign = -1），即 mTORC1 输出越弱/障碍越重，该模块得分越高。
+      解释边界：转录足迹并不等价于 p-S6/p-4EBP1；该集合用于与 WB 动态输出（EV004a/EV004b）互补。
+    genes:
+      - name: Myc
+        gene_effect_sign: -1
+        weight: 1
+      - name: Ncl
+        gene_effect_sign: -1
+        weight: 1
+      - name: Npm1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Ddx21
+        gene_effect_sign: -1
+        weight: 1
+      - name: Tcof1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Polr1a
+        gene_effect_sign: -1
+        weight: 1
+      - name: Polr1c
+        gene_effect_sign: -1
+        weight: 1
+      - name: Pes1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Wdr12
+        gene_effect_sign: -1
+        weight: 1
+      - name: Rrp9
+        gene_effect_sign: -1
+        weight: 1
+      - name: Eif4a1
+        gene_effect_sign: -1
+        weight: 1
+      - name: Eef2
+        gene_effect_sign: -1
+        weight: 1
+
+  EphB1_PI3K_AKT_FOXO_suppression_footprint:
+    axis: "EphB1_signaling"
+    target_mechanistic_axes:
+      - "Membrane context"
+      - "Supply"
+      - "Synthesis"
+    label: "EphB1–PI3K/AKT classic footprint (FOXO suppression)"
+    description: >
+      生物学事件：PI3K–AKT 激活后可通过磷酸化抑制 FOXO 家族转录因子（核外转位/转录抑制），从而压低一组应激/静息/分解偏向的 FOXO 靶基因表达。
+      本基因集定位：footprint（AKT→FOXO 抑制读出）。纳入的是典型 FOXO 相关靶基因/读出（多为细胞周期抑制、应激/代谢与凋亡倾向基因）。
+      计分方向：为使“分数越高=通路障碍越高”，该集合按 FOXO 靶基因‘解除抑制’方向计分：当 AKT 输出更弱/障碍更重时，FOXO 程序更易上升，因此 FOXO 靶基因统一设为 gene_effect_sign = +1。
+      解释边界：FOXO 靶基因具有细胞类型与情境依赖（炎症/IFN/营养应激也可驱动其中一部分）；该模块更适合与 mTORC1–SREBP footprint 联合解读，用于提高 PI3K 解释的覆盖面与稳健性。
+      可能漏纳/可替换：Foxo1/3 本体（更像 capacity/参考）、Klf2/Klf4（静息程序）、Sestrin1/2（应激），以及更直接的 FOXO ChIP 支持靶基因（依细胞类型调整）。
+    genes:
+      - name: Txnip
+        gene_effect_sign: 1
+        weight: 1
+      - name: Trib3
+        gene_effect_sign: 1
+        weight: 1
+      - name: Sesn3
+        gene_effect_sign: 1
+        weight: 1
+      - name: Bcl2l11
+        gene_effect_sign: 1
+        weight: 1
+      - name: Fasl
+        gene_effect_sign: 1
+        weight: 1
+      - name: Gadd45a
+        gene_effect_sign: 1
+        weight: 1
+      - name: Gadd45b
+        gene_effect_sign: 1
+        weight: 1
+      - name: Cdkn1a
+        gene_effect_sign: 1
+        weight: 1
+      - name: Cdkn1b
+        gene_effect_sign: 1
+        weight: 1
+      - name: Bnip3
+        gene_effect_sign: 1
+        weight: 1
+      - name: Pmaip1
+        gene_effect_sign: 1
+        weight: 1
+      - name: Dusp10
+        gene_effect_sign: 1
+        weight: 1
+      - name: Klf2
+        gene_effect_sign: 1
+        weight: 1
+      - name: Klf4
+        gene_effect_sign: 1
+        weight: 1
+
+  Confound_IFN_I_response:
+    axis: "Confound_control"
+    target_mechanistic_axes:
+      - "Confound"
+    label: "Negative control: IFN-I response / ISG program"
+    description: >
+      负控集合：用于判别 PI3K footprint 是否被 IFN/抗病毒应答牵引。
+      分数高=该混杂程序更强（与 PI3K 障碍分无直接同义）。
+    genes:
+      - name: Stat1
+        gene_effect_sign: 1
+        weight: 1
+      - name: Irf7
+        gene_effect_sign: 1
+        weight: 1
+      - name: Isg15
+        gene_effect_sign: 1
+        weight: 1
+      - name: Ifit1
+        gene_effect_sign: 1
+        weight: 1
+      - name: Ifit3
+        gene_effect_sign: 1
+        weight: 1
+      - name: Oas1a
+        gene_effect_sign: 1
+        weight: 1
+      - name: Oas2
+        gene_effect_sign: 1
+        weight: 1
+      - name: Mx1
+        gene_effect_sign: 1
+        weight: 1
+
+  Confound_UPR_ER_stress:
+    axis: "Confound_control"
+    target_mechanistic_axes:
+      - "Confound"
+    label: "Negative control: UPR / ER stress program"
+    description: >
+      负控集合：用于判别 PI3K footprint 是否被 ER stress/UPR 牵引（可同时影响脂质合成链与应激转录）。
+      分数高=该混杂程序更强（与 PI3K 障碍分无直接同义）。
+    genes:
+      - name: Atf4
+        gene_effect_sign: 1
+        weight: 1
+      - name: Ddit3
+        gene_effect_sign: 1
+        weight: 1
+      - name: Hspa5
+        gene_effect_sign: 1
+        weight: 1
+      - name: Xbp1
+        gene_effect_sign: 1
+        weight: 1
+      - name: Ern1
+        gene_effect_sign: 1
+        weight: 1
+      - name: Atf6
+        gene_effect_sign: 1
+        weight: 1
+      - name: Herpud1
+        gene_effect_sign: 1
+        weight: 1
+      - name: Ppp1r15a
+        gene_effect_sign: 1
+        weight: 1
