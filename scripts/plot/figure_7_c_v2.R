@@ -205,9 +205,8 @@ plot_for_one_Z <- function(Z_col, paths) {
     mutate(M = factor(M, levels = topM))
 
   pB <- ggplot(df_longB, aes(x = M_score, y = Z, shape = batch)) +
-    geom_point(aes(fill = group), size = 2.6, alpha = 0.9, stroke = 0.3) +
-    # use filled shapes for better visibility
-    scale_shape_manual(values = c(21, 22, 24, 25)[seq_along(unique(df_longB$batch))]) +
+    geom_point(aes(color = group), size = 2.6, alpha = 0.9) +
+    scale_shape_manual(values = c(16, 15, 17, 18)[seq_along(unique(df_longB$batch))]) +
     facet_wrap(~ M, scales = "free_x") +
     labs(
       title = paste0("Figure6B  Z vs M (Z = ", Z_col, ")"),

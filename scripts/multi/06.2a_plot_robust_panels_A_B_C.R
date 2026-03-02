@@ -117,8 +117,8 @@ B_long <- sc %>%
   )
 
 pB <- ggplot(B_long, aes(x = M, y = Y, color = group)) +
-  geom_point(size = 2.4) +
-  geom_smooth(method = "lm", se = FALSE) +
+  geom_point(size = 2.4, shape = 16) +
+  geom_smooth(method = "lm", se = FALSE, show.legend = FALSE) +
   facet_wrap(~ mediator_col, scales = "free_x") +
   labs(
     title = paste0("B. Scatter (Top ", length(top_mediators), " mediators): M vs Y"),
