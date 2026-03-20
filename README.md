@@ -1,3 +1,22 @@
-# Multi-omics Mechanism Project
-用于 EphB1 → 心磷脂（CL）机制路径的多组学分析。
-阶段：数据准备 → 机制效应计算 → 跨批合并 → 跨组学整合 → 上游通路 → 中介分析。
+
+# Multi-omics Analysis Pipeline
+
+Reproducible pipeline for integrative multi-omics data analysis.
+
+## Overview
+
+Standardized workflow for multi-omics data processing, statistical analysis, and visualization.
+
+## Features
+
+- Reproducible analysis pipeline
+- Multi-omics integration
+- Automated visualization outputs
+
+## Tech Stack
+
+Python, R, pandas, matplotlib
+
+## Example
+
+![1773999086910](image/README/1773999086910.png)
